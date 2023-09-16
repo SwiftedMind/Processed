@@ -36,8 +36,8 @@ import SwiftUI
         }
     }
 
-    /// Provides a manager for controlling the process.
-    public var projectedValue: Manager {
+    /// Provides a binding for controlling the process.
+    public var projectedValue: Binding {
         .init(state: $state, task: $task)
     }
 
@@ -55,10 +55,10 @@ import SwiftUI
 }
 
 extension Loadable {
-    /// A manager for controlling the process's state and execution.
-    public struct Manager {
-        @Binding var state: LoadableState<Value>
-        @Binding var task: Task<Void, Never>?
+    /// A binding for controlling the process's state and execution.
+    public struct Binding {
+        @SwiftUI.Binding var state: LoadableState<Value>
+        @SwiftUI.Binding var task: Task<Void, Never>?
 
         public func cancel() {
             task?.cancel()

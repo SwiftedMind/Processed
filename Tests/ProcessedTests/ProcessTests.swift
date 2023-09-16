@@ -29,11 +29,11 @@ private struct EquatableError: Error, Equatable {}
 final class ProcessTests: XCTestCase {
 
     @MainActor func testBasicStates() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
 
-        await manager.run(process) {
+        await binding.run(process) {
             return
         }
 
@@ -41,26 +41,26 @@ final class ProcessTests: XCTestCase {
     }
 
     @MainActor func testReset() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
 
-        await manager.run(process) {
+        await binding.run(process) {
             return
         }
 
-        manager.reset()
+        binding.reset()
 
         XCTAssertEqual(container.stateHistory, [.idle, .running(process), .finished(process), .idle])
     }
 
     @MainActor func testCancel() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
 
         let task = Task {
-            await manager.run(process) {
+            await binding.run(process) {
                 try await Task.sleep(nanoseconds: 2 * NSEC_PER_SEC)
                 XCTFail("Should not get here!")
             }
@@ -73,11 +73,11 @@ final class ProcessTests: XCTestCase {
     }
 
     @MainActor func testResetError() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
 
-        await manager.run(process) {
+        await binding.run(process) {
             throw ProcessReset()
         }
 
@@ -85,11 +85,11 @@ final class ProcessTests: XCTestCase {
     }
 
     @MainActor func testErrorStates() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
 
-        await manager.run(process) {
+        await binding.run(process) {
             throw EquatableError()
         }
 
@@ -97,11 +97,11 @@ final class ProcessTests: XCTestCase {
     }
 
     @MainActor func testRunSilently() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
 
-        await manager.run(process, silently: true) {
+        await binding.run(process, silently: true) {
             return
         }
 
@@ -109,16 +109,16 @@ final class ProcessTests: XCTestCase {
     }
 
     @MainActor func testRunTwice() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
-        let secondProcess = UniqueProcessKind(id: "2")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
+        let secondProcess = SingleProcess(id: "2")
 
-        await manager.run(process) {
+        await binding.run(process) {
             return
         }
 
-        await manager.run(secondProcess) {
+        await binding.run(secondProcess) {
             return
         }
 
@@ -132,16 +132,16 @@ final class ProcessTests: XCTestCase {
     }
 
     @MainActor func testRunTwiceFailFirst() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let manager = Process.Manager(state: container.processBinding, task: container.taskBinding)
-        let process = UniqueProcessKind(id: "1")
-        let secondProcess = UniqueProcessKind(id: "2")
+        let container = ProcessContainer<SingleProcess>()
+        let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+        let process = SingleProcess(id: "1")
+        let secondProcess = SingleProcess(id: "2")
 
-        await manager.run(process) {
+        await binding.run(process) {
             throw EquatableError()
         }
 
-        await manager.run(secondProcess) {
+        await binding.run(secondProcess) {
             return
         }
 

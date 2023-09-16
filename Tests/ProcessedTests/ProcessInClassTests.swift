@@ -28,8 +28,8 @@ private struct EquatableError: Error, Equatable {}
 
 final class ProcessInClassTests: XCTestCase {
     @MainActor func testBasic() async throws {
-        let container = ProcessContainer<UniqueProcessKind>()
-        let process = UniqueProcessKind(id: "1")
+        let container = ProcessContainer<SingleProcess>()
+        let process = SingleProcess(id: "1")
 
         await container.run(\.process, as: process) {
             return

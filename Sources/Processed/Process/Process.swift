@@ -22,38 +22,15 @@
 
 import SwiftUI
 
-/// A unique identifier for a process.
-public struct UniqueProcessKind: Equatable, Sendable {
-    /// The unique identifier for the process.
-    var id: String
-    /// The date when the process was initialized.
-    var initializedAt: Date
-
-    /// Initializes a new unique process.
-    /// - Parameters:
-    ///   - id: The unique identifier for the process. Defaults to a new UUID.
-    ///   - initializedAt: The date when the process was initialized. Defaults to current date and time.
-    public init(id: String = UUID().uuidString, initializedAt: Date = .now) {
-        self.id = id
-        self.initializedAt = initializedAt
-    }
-}
-
-extension UniqueProcessKind: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "\(id)"
-    }
-}
-
 /// A property wrapper to manage the state of an asynchronous process.
 @propertyWrapper
-public struct Process<ProcessKind>: DynamicProperty where ProcessKind: Equatable, ProcessKind: Sendable {
+public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
 
-    @SwiftUI.State private var state: ProcessState<ProcessKind>
+    @SwiftUI.State private var state: ProcessState<ProcessID>
     @SwiftUI.State private var task: Task<Void, Never>?
 
     /// The current state of the process.
-    public var wrappedValue: ProcessState<ProcessKind> {
+    public var wrappedValue: ProcessState<ProcessID> {
         get { state }
         nonmutating set {
             cancel()
@@ -61,19 +38,19 @@ public struct Process<ProcessKind>: DynamicProperty where ProcessKind: Equatable
         }
     }
 
-    /// Provides a manager for controlling the process.
-    public var projectedValue: Manager {
+    /// Provides a binding for controlling the process.
+    public var projectedValue: Binding {
         .init(state: $state, task: $task)
     }
 
     /// Initializes the process with an initial state.
     /// - Parameter initialState: The initial state of the process. Defaults to `.idle`.
-    public init(initialState: ProcessState<ProcessKind> = .idle) {
+    public init(initialState: ProcessState<ProcessID> = .idle) {
         self._state = .init(initialValue: initialState)
     }
 
-    /// Default initializer for `Process<UniqueProcessKind>`.
-    public init() where ProcessKind == UniqueProcessKind {
+    /// Default initializer for `Process<SingleProcess>`.
+    public init() where ProcessID == SingleProcess {
         self._state = .init(initialValue: .idle)
     }
 
@@ -85,10 +62,46 @@ public struct Process<ProcessKind>: DynamicProperty where ProcessKind: Equatable
 }
 
 extension Process {
-    /// A manager for controlling the process's state and execution.
-    public struct Manager {
-        @Binding var state: ProcessState<ProcessKind>
-        @Binding var task: Task<Void, Never>?
+    /// A binding for controlling the process's state and execution.
+    @propertyWrapper public struct Binding {
+        @SwiftUI.Binding var state: ProcessState<ProcessID>
+        @SwiftUI.Binding var task: Task<Void, Never>?
+
+        public var wrappedValue: ProcessState<ProcessID> {
+            get { state }
+            nonmutating set {
+                cancel()
+                state = newValue
+            }
+        }
+
+        /// Provides a binding for controlling the process.
+        public var projectedValue: Binding {
+            self
+        }
+
+        public init(
+            state: SwiftUI.Binding<ProcessState<ProcessID>>,
+            task: SwiftUI.Binding<Task<Void, Never>?>
+        ) {
+            self._state = state
+            self._task = task
+        }
+
+        public init(_ binding: Process<ProcessID>.Binding) {
+            self = binding
+        }
+
+        public static func mocked(
+            _ container: ProcessMockContainer<ProcessID>
+        ) -> Process<ProcessID>.Binding {
+            .init(state: container.processBinding, task: container.taskBinding)
+        }
+
+        public static func mocked() -> Process<ProcessID>.Binding {
+            let container = ProcessMockContainer<ProcessID>()
+            return .init(state: container.processBinding, task: container.taskBinding)
+        }
 
         public func cancel() {
             task?.cancel()
@@ -112,7 +125,7 @@ extension Process {
         ///   - block: The asynchronous block of code to execute.
         /// - Returns: The task representing the process execution.
         @discardableResult public func run(
-            _ process: ProcessKind,
+            _ process: ProcessID,
             silently runSilently: Bool = false,
             priority: TaskPriority? = nil,
             block: @escaping () async throws -> Void
@@ -126,7 +139,7 @@ extension Process {
         }
 
         public func run(
-            _ process: ProcessKind,
+            _ process: ProcessID,
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
         ) async {
@@ -136,14 +149,14 @@ extension Process {
         public func run(
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
-        ) where ProcessKind == UniqueProcessKind {
+        ) where ProcessID == SingleProcess {
             run(.init(), silently: runSilently, block: block)
         }
 
         public func run(
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
-        ) async where ProcessKind == UniqueProcessKind {
+        ) async where ProcessID == SingleProcess {
             await runTaskBody(process: .init(), runSilently: runSilently, block: block)
         }
 
@@ -157,7 +170,7 @@ extension Process {
         ///   - block: The asynchronous block of code to execute.
         /// - Returns: The task representing the process execution.
         @discardableResult public func runDetached(
-            _ process: ProcessKind,
+            _ process: ProcessID,
             silently runSilently: Bool = false,
             priority: TaskPriority? = nil,
             block: @escaping () async throws -> Void
@@ -171,7 +184,7 @@ extension Process {
         }
 
         public func runDetached(
-            _ process: ProcessKind,
+            _ process: ProcessID,
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
         ) async {
@@ -181,21 +194,21 @@ extension Process {
         public func runDetached(
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
-        ) where ProcessKind == UniqueProcessKind {
+        ) where ProcessID == SingleProcess {
             runDetached(.init(), silently: runSilently, block: block)
         }
 
          public func runDetached(
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
-        ) async where ProcessKind == UniqueProcessKind {
+        ) async where ProcessID == SingleProcess {
             await runDetached(.init(), silently: runSilently, block: block).value
         }
 
         // MARK: - Internal
 
         private func runTaskBody(
-            process: ProcessKind,
+            process: ProcessID,
             runSilently: Bool,
             block: @escaping () async throws -> Void
         ) async {
@@ -215,3 +228,5 @@ extension Process {
         }
     }
 }
+
+public typealias ProcessBinding<SingleProcess: Equatable> = Process<SingleProcess>.Binding

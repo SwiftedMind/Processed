@@ -20,34 +20,27 @@
 //  SOFTWARE.
 //
 
-@testable import Processed
 import SwiftUI
 
-@MainActor final class ProcessContainer<ProcessID>: Processable {
-    private(set) var stateHistory: [ProcessState<ProcessID>]
-    var task: Task<Void, Never>?
-    var process: ProcessState<ProcessID> {
-        didSet { stateHistory.append(process) }
-    }
+/// A unique identifier for a process.
+public struct SingleProcess: Equatable, Sendable {
+    /// The unique identifier for the process.
+    var id: String
+    /// The date when the process was initialized.
+    var initializedAt: Date
 
-    init(initialState: ProcessState<ProcessID> = .idle) {
-        self.process = initialState
-        self.stateHistory = [process]
+    /// Initializes a new unique process.
+    /// - Parameters:
+    ///   - id: The unique identifier for the process. Defaults to a new UUID.
+    ///   - initializedAt: The date when the process was initialized. Defaults to current date and time.
+    public init(id: String = UUID().uuidString, initializedAt: Date = .now) {
+        self.id = id
+        self.initializedAt = initializedAt
     }
+}
 
-    var taskBinding: Binding<Task<Void, Never>?> {
-        .init {
-            self.task
-        } set: { newValue in
-            self.task = newValue
-        }
-    }
-
-    var processBinding: Binding<ProcessState<ProcessID>> {
-        .init {
-            self.process
-        } set: { newValue in
-            self.process = newValue
-        }
+extension SingleProcess: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "\(id)"
     }
 }

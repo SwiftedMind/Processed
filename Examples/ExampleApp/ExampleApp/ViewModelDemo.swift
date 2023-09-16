@@ -85,13 +85,13 @@ extension ViewModelDemo {
     @MainActor
     final class ViewModel: ObservableObject, Processable, LoadingSupport {
 
-        enum ProcessKind {
+        enum SingleProcess {
             case delete
             case reset
         }
 
         @Published var numbers: LoadableState<[Int]> = .absent
-        @Published var process: ProcessState<ProcessKind> = .idle
+        @Published var process: ProcessState<SingleProcess> = .idle
 
         func load() {
             load(\.numbers) { yield in

@@ -119,5 +119,7 @@ struct ViewDemo: View {
 }
 
 #Preview {
-    ViewDemo().preferredColorScheme(.dark)
+    MainActor.assumeIsolated {
+        ViewDemo().preferredColorScheme(.dark)
+    }
 }

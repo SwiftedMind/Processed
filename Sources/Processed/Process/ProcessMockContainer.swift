@@ -20,19 +20,14 @@
 //  SOFTWARE.
 //
 
-@testable import Processed
 import SwiftUI
 
-@MainActor final class ProcessContainer<ProcessID>: Processable {
-    private(set) var stateHistory: [ProcessState<ProcessID>]
+final public class ProcessMockContainer<ProcessID> {
+    var process: ProcessState<ProcessID>
     var task: Task<Void, Never>?
-    var process: ProcessState<ProcessID> {
-        didSet { stateHistory.append(process) }
-    }
 
-    init(initialState: ProcessState<ProcessID> = .idle) {
+    public init(initialState: ProcessState<ProcessID> = .idle) {
         self.process = initialState
-        self.stateHistory = [process]
     }
 
     var taskBinding: Binding<Task<Void, Never>?> {

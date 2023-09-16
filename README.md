@@ -17,13 +17,13 @@ import Processed
 
 struct ViewDemo: View {
     
-    enum ProcessKind {
+    enum SingleProcess {
         case delete
         case reset
     }
 
     @Loadable var numbers: LoadableState<[Int]>
-    @Process<ProcessKind> var process
+    @Process<SingleProcess> var process
 
     var body: some View {
         List {

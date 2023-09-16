@@ -23,17 +23,17 @@
 import Foundation
 
 /// Represents the possible states of a process.
-public enum ProcessState<ProcessKind> {
+public enum ProcessState<ProcessID> {
     case idle
-    case running(ProcessKind)
-    case failed(process: ProcessKind, error: Swift.Error)
-    case finished(ProcessKind)
+    case running(ProcessID)
+    case failed(process: ProcessID, error: Swift.Error)
+    case finished(ProcessID)
 
     public init(initialState: ProcessState) {
         self = initialState
     }
 
-    public init(initialState: ProcessState) where ProcessKind == UniqueProcessKind {
+    public init(initialState: ProcessState) where ProcessID == SingleProcess {
         self = initialState
     }
 }
@@ -43,12 +43,12 @@ extension ProcessState: CustomDebugStringConvertible {
         switch self {
         case .idle:
             return "idle"
-        case .running(let processKind):
-            return "running(\(processKind))"
-        case .failed(let processKind, let error):
-            return "failed((\(processKind)), \(error.localizedDescription))"
-        case .finished(let processKind):
-            return "finished(\(processKind))"
+        case .running(let process):
+            return "running(\(process))"
+        case .failed(let process, let error):
+            return "failed((\(process)), \(error.localizedDescription))"
+        case .finished(let process):
+            return "finished(\(process))"
         }
     }
 }
@@ -66,12 +66,12 @@ extension ProcessState {
 
     /// Starts running the specified process.
     /// - Parameter process: The process to start running.
-    public mutating func start(_ process: ProcessKind) {
+    public mutating func start(_ process: ProcessID) {
         self = .running(process)
     }
 
     /// Starts running a new unique process.
-    public mutating func start() where ProcessKind == UniqueProcessKind {
+    public mutating func start() where ProcessID == SingleProcess {
         start(.init())
     }
 
@@ -109,13 +109,13 @@ extension ProcessState {
     /// - Parameters:
     ///   - process: The process that failed.
     ///   - error: The error causing the failure.
-    public mutating func setFailed(_ process: ProcessKind, error: Swift.Error) {
+    public mutating func setFailed(_ process: ProcessID, error: Swift.Error) {
         self = .failed(process: process, error: error)
     }
 
     /// Sets the process state to `.finished` with the specified process.
     /// - Parameter process: The process that finished.
-    public mutating func setFinished(_ process: ProcessKind) {
+    public mutating func setFinished(_ process: ProcessID) {
         self = .finished(process)
     }
 
@@ -131,7 +131,7 @@ extension ProcessState {
         return false
     }
 
-    public func isRunning(_ process: ProcessKind) -> Bool where ProcessKind: Equatable {
+    public func isRunning(_ process: ProcessID) -> Bool where ProcessID: Equatable {
         if case .running(let runningProcess) = self { return runningProcess == process }
         return false
     }
@@ -141,7 +141,7 @@ extension ProcessState {
         return false
     }
 
-    public func hasFailed(_ process: ProcessKind) -> Bool where ProcessKind: Equatable {
+    public func hasFailed(_ process: ProcessID) -> Bool where ProcessID: Equatable {
         if case .failed(let failedProcess, _) = self { return failedProcess == process }
         return false
     }
@@ -156,13 +156,13 @@ extension ProcessState {
         return false
     }
 
-    public func hasFinished(_ process: ProcessKind) -> Bool where ProcessKind: Equatable {
+    public func hasFinished(_ process: ProcessID) -> Bool where ProcessID: Equatable {
         if case .finished(let finishedProcess) = self { return finishedProcess == process }
         return false
     }
 }
 
-extension ProcessState: Equatable where ProcessKind: Equatable {
+extension ProcessState: Equatable where ProcessID: Equatable {
     nonisolated public static func == (lhs: ProcessState, rhs: ProcessState) -> Bool {
         switch (lhs, rhs) {
         case (.idle, .idle): return true

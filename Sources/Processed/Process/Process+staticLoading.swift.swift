@@ -24,37 +24,37 @@ import SwiftUI
 
 @MainActor
 public protocol Processable where Self: ObservableObject {
-    func cancelProcess<ProcessKind>(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>
+    func cancelProcess<ProcessID>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>
     )
 
-    func run<ProcessKind>(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
-        as processKind: ProcessKind,
+    func run<ProcessID>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+        as processKind: ProcessID,
         silently runSilently: Bool,
         priority: TaskPriority?,
         block: @escaping () async throws -> Void
     )
 
-    func run<ProcessKind>(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
-        as process: ProcessKind,
+    func run<ProcessID>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+        as process: ProcessID,
         silently runSilently: Bool,
         priority: TaskPriority?,
         block: @escaping () async throws -> Void
     ) async
 
     func run(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
-        as processKind: UniqueProcessKind,
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+        as processKind: SingleProcess,
         silently runSilently: Bool,
         priority: TaskPriority?,
         block: @escaping () async throws -> Void
     )
 
     func run(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
-        as processKind: UniqueProcessKind,
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+        as processKind: SingleProcess,
         silently runSilently: Bool,
         priority: TaskPriority?,
         block: @escaping () async throws -> Void
@@ -63,7 +63,7 @@ public protocol Processable where Self: ObservableObject {
 
 extension Processable {
 
-    @MainActor public func cancelProcess<ProcessKind>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>) {
+    @MainActor public func cancelProcess<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>) {
         let identifier = ProcessIdentifier(
             identifier: ObjectIdentifier(self),
             keyPath: processState
@@ -72,9 +72,9 @@ extension Processable {
         tasks.removeValue(forKey: identifier)
     }
 
-    @MainActor public func run<ProcessKind>(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
-        as processKind: ProcessKind,
+    @MainActor public func run<ProcessID>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+        as processKind: ProcessID,
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
@@ -98,9 +98,9 @@ extension Processable {
         }
     }
 
-    @MainActor public func run<ProcessKind>(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
-        as process: ProcessKind,
+    @MainActor public func run<ProcessID>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+        as process: ProcessID,
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
@@ -121,8 +121,8 @@ extension Processable {
     }
 
     @MainActor public func run(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
-        as process: UniqueProcessKind = .init(),
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+        as process: SingleProcess = .init(),
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
@@ -147,8 +147,8 @@ extension Processable {
     }
 
     @MainActor public func run(
-        _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
-        as process: UniqueProcessKind = .init(),
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+        as process: SingleProcess = .init(),
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
