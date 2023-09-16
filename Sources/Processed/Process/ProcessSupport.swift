@@ -23,7 +23,7 @@
 import SwiftUI
 
 @MainActor
-public protocol Processable where Self: ObservableObject {
+public protocol ProcessSupport where Self: ObservableObject {
     func cancelProcess<ProcessID>(
         _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>
     )
@@ -61,7 +61,7 @@ public protocol Processable where Self: ObservableObject {
     ) async
 }
 
-extension Processable {
+extension ProcessSupport {
 
     @MainActor public func cancelProcess<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>) {
         let identifier = ProcessIdentifier(

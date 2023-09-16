@@ -23,7 +23,7 @@
 import SwiftUI
 
 @MainActor
-public protocol LoadingSupport where Self: ObservableObject {
+public protocol LoadableSupport where Self: ObservableObject {
 
     func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
 
@@ -42,7 +42,7 @@ public protocol LoadingSupport where Self: ObservableObject {
     )
 }
 
-extension LoadingSupport {
+extension LoadableSupport {
 
     public func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
         let identifier = ProcessIdentifier(
