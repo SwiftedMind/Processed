@@ -19,14 +19,15 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+import Foundation
 
-import SwiftUI
 
-@main
-struct ExampleApp: App {
-    var body: some Scene {
-        WindowGroup {
-            Root()
-        }
-    }
+/// An error indicating that s process has been canceled.
+public struct LoadableReset: Error, Sendable, Hashable {
+    public init() {}
+}
+
+/// An error indicating that s process has been canceled.
+public struct ProcessReset: Error, Sendable, Hashable {
+    public init() {}
 }

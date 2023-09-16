@@ -23,22 +23,24 @@
 import SwiftUI
 import Processed
 
-struct ContentView: View {
+struct ViewDemo: View {
     
     enum ProcessKind {
-        case save
         case delete
+        case reset
     }
 
-    @Loadable<[Int]> var numbers
+    @Loadable var numbers: LoadableState<[Int]>
     @Process<ProcessKind> var process
 
     var body: some View {
         List {
             switch numbers {
             case .absent:
-                Button("Load") {
-                    load()
+                Section {
+                    Button("Load") {
+                        load()
+                    }
                 }
             case .loading:
                 ProgressView()
@@ -48,6 +50,10 @@ struct ContentView: View {
                 Text("An error occurred: \(error.localizedDescription)")
             case .loaded(let numbers):
                 Section {
+                    deleteButton
+                    resetButton
+                }
+                Section {
                     if numbers.isEmpty {
                         Text("No Numbers Found")
                     } else {
@@ -56,32 +62,29 @@ struct ContentView: View {
                         }
                     }
                 }
-                Section {
-                    saveButton
-                    deleteButton
-                }
             }
         }
         .animation(.default, value: process)
         .animation(.default, value: numbers)
-    }
-
-    @ViewBuilder @MainActor
-    private var saveButton: some View {
-        LoadingButton("Save") {
-            save()
-        }
-        .isLoading(process.isRunning(.save))
-        .disabled(process.isRunning)
+        .navigationTitle("View Demo")
     }
 
     @ViewBuilder @MainActor
     private var deleteButton: some View {
-        LoadingButton("Delete", role: .destructive) {
+        LoadingButton("Delete All Numbers", role: .destructive) {
             delete()
         }
         .isLoading(process.isRunning(.delete))
         .disabled(process.isRunning)
+        .disabled(numbers.data?.isEmpty == true)
+    }
+
+    @ViewBuilder @MainActor
+    private var resetButton: some View {
+        LoadingButton("Reset") {
+            reset()
+        }
+        .isLoading(process.isRunning(.reset))
     }
 
     @MainActor func load() {
@@ -97,21 +100,24 @@ struct ContentView: View {
         }
     }
 
-    @MainActor func save() {
-        $process.run(.save) {
-            // Simulate saving
-            try await Task.sleep(for: .seconds(2))
+    @MainActor func delete() {
+        $process.run(.delete) {
+            try await Task.sleep(for: .seconds(1))
+            $numbers.cancel()
+            numbers.setValue([])
         }
     }
 
-    @MainActor func delete() {
-        $process.run(.delete) {
-            try await Task.sleep(for: .seconds(2))
-            numbers.setValue([])
+    @MainActor func reset() {
+        $process.run(.reset) {
+            try await Task.sleep(for: .seconds(1))
+            $numbers.cancel()
+            numbers.setAbsent()
+            process.setIdle()
         }
     }
 }
 
 #Preview {
-    ContentView()
+    ViewDemo().preferredColorScheme(.dark)
 }

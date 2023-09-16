@@ -19,8 +19,14 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 import Foundation
 
-/// An error indicating that s process has been aborted.
-public struct AbortError: Error, Sendable, Hashable {}
+struct ProcessIdentifier: Hashable {
+    var identifier: ObjectIdentifier
+    var keyPath: AnyKeyPath
+}
 
+var tasks: [ProcessIdentifier: Task<Void, Never>] = [:] {
+    didSet { print("Global Tasks:", String(tasks.count)) }
+}
