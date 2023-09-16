@@ -44,8 +44,8 @@ private struct EquatableError: Error, Equatable {}
         let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
 
         await binding.load { yield in
-            yield(42)
-            yield(73)
+            yield(.loaded(42))
+            yield(.loaded(73))
         }
 
         XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .loaded(73)])
@@ -56,12 +56,12 @@ private struct EquatableError: Error, Equatable {}
         let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
 
         await binding.load { yield in
-            yield(42)
-            yield(73)
+            yield(.loaded(42))
+            yield(.loaded(73))
         }
 
         await binding.load { yield in
-            yield(100)
+            yield(.loaded(100))
         }
 
         XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .loaded(73), .loading, .loaded(100)])
@@ -83,7 +83,7 @@ private struct EquatableError: Error, Equatable {}
         let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
 
         await binding.load(silently: true) { yield in
-            yield(42)
+            yield(.loaded(42))
         }
 
         XCTAssertEqual(container.stateHistory, [.absent, .loaded(42)])

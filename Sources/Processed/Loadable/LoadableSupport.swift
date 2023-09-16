@@ -38,7 +38,7 @@ public protocol LoadableSupport where Self: ObservableObject {
         _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
         silently runSilently: Bool,
         priority: TaskPriority?,
-        block: @escaping (_ yield: (_ result: Value) -> Void) async throws -> Void
+        block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
     )
 }
 
@@ -87,7 +87,7 @@ extension LoadableSupport {
         _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
-        block: @escaping (_ yield: (_ result: Value) -> Void) async throws -> Void
+        block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
     ) {
         let identifier = ProcessIdentifier(
             identifier: ObjectIdentifier(self),
@@ -102,8 +102,8 @@ extension LoadableSupport {
 
             do {
                 if !runSilently { self[keyPath: loadableState] = .loading }
-                try await block { result in
-                    self[keyPath: loadableState] = .loaded(result)
+                try await block { state in
+                    self[keyPath: loadableState] = state
                 }
             } catch is CancellationError {
                 // Task was cancelled. Don't change the state anymore

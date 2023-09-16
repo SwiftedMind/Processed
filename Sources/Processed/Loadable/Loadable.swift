@@ -77,7 +77,7 @@ extension Loadable {
         @discardableResult public func load(
             silently runSilently: Bool = false,
             priority: TaskPriority? = nil,
-            block: @escaping (_ yield: (_ result: Value) -> Void) async throws -> Void
+            block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
         ) -> Task<Void, Never> {
             cancel()
             let task = Task(priority: priority) {
@@ -90,12 +90,12 @@ extension Loadable {
         public func load(
             silently runSilently: Bool = false,
             priority: TaskPriority? = nil,
-            block: @escaping (_ yield: (_ result: Value) -> Void) async throws -> Void
+            block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
         ) async {
             do {
                 if !runSilently { state = .loading }
-                try await block { result in
-                    state = .loaded(result)
+                try await block { yieldedState in
+                    state = yieldedState
                 }
             } catch is CancellationError {
                 // Task was cancelled. Don't change the state anymore
