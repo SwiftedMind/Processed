@@ -1,4 +1,13 @@
+<p align="center">
+  <img width="200" height="200" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
+</p>
+
 # Processed
+
+![GitHub tag (with filter)](https://img.shields.io/github/v/tag/SwiftedMind/Processed)
+![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
+
+
 
 README is a work in progress.
 
