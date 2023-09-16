@@ -105,6 +105,14 @@ extension ProcessState {
         self = .idle
     }
 
+    public mutating func setRunning(_ process: ProcessID) {
+        self = .running(process)
+    }
+
+    public mutating func setRunning() where ProcessID == SingleProcess {
+        self = .running(.init())
+    }
+
     /// Sets the process state to `.failed` with the specified process and error.
     /// - Parameters:
     ///   - process: The process that failed.
@@ -113,10 +121,18 @@ extension ProcessState {
         self = .failed(process: process, error: error)
     }
 
+    public mutating func setFailed(with error: Swift.Error) where ProcessID == SingleProcess {
+        self = .failed(process: .init(), error: error)
+    }
+
     /// Sets the process state to `.finished` with the specified process.
     /// - Parameter process: The process that finished.
     public mutating func setFinished(_ process: ProcessID) {
         self = .finished(process)
+    }
+
+    public mutating func setFinished() where ProcessID == SingleProcess {
+        self = .finished(.init())
     }
 
     // MARK: - Convenience
