@@ -2,6 +2,106 @@
 
 README is a work in progress.
 
+```swift
+import SwiftUI
+import Processed
+
+struct ViewDemo: View {
+    
+    enum ProcessKind {
+        case delete
+        case reset
+    }
+
+    @Loadable var numbers: LoadableState<[Int]>
+    @Process<ProcessKind> var process
+
+    var body: some View {
+        List {
+            switch numbers {
+            case .absent:
+                Section {
+                    Button("Load") {
+                        load()
+                    }
+                }
+            case .loading:
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+            case .error(let error):
+                Text("An error occurred: \(error.localizedDescription)")
+            case .loaded(let numbers):
+                Section {
+                    deleteButton
+                    resetButton
+                }
+                Section {
+                    if numbers.isEmpty {
+                        Text("No Numbers Found")
+                    } else {
+                        ForEach(numbers, id: \.self) { number in
+                            Text(String(number))
+                        }
+                    }
+                }
+            }
+        }
+        .animation(.default, value: process)
+        .animation(.default, value: numbers)
+        .navigationTitle("View Demo")
+    }
+
+    @ViewBuilder @MainActor
+    private var deleteButton: some View {
+        LoadingButton("Delete All Numbers", role: .destructive) {
+            delete()
+        }
+        .isLoading(process.isRunning(.delete))
+        .disabled(process.isRunning)
+        .disabled(numbers.data?.isEmpty == true)
+    }
+
+    @ViewBuilder @MainActor
+    private var resetButton: some View {
+        LoadingButton("Reset") {
+            reset()
+        }
+        .isLoading(process.isRunning(.reset))
+    }
+
+    @MainActor func load() {
+        $numbers.load { yield in
+            var numbers: [Int] = []
+            for await number in [1, 2, 3, 4, 5].publisher.values {
+                try await Task.sleep(for: .seconds(1))
+                numbers.append(number)
+                yield(numbers)
+            }
+            try await Task.sleep(for: .seconds(1))
+            yield(numbers.shuffled())
+        }
+    }
+
+    @MainActor func delete() {
+        $process.run(.delete) {
+            try await Task.sleep(for: .seconds(1))
+            $numbers.cancel()
+            numbers.setValue([])
+        }
+    }
+
+    @MainActor func reset() {
+        $process.run(.reset) {
+            try await Task.sleep(for: .seconds(1))
+            $numbers.cancel()
+            numbers.setAbsent()
+            process.setIdle()
+        }
+    }
+}
+```
+
 ## License
 
 MIT License
