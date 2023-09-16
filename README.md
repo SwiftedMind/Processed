@@ -17,13 +17,13 @@ import Processed
 
 struct ViewDemo: View {
     
-    enum SingleProcess {
+    enum ProcessKind {
         case delete
         case reset
     }
 
     @Loadable var numbers: LoadableState<[Int]>
-    @Process<SingleProcess> var process
+    @Process<ProcessKind> var process
 
     var body: some View {
         List {
@@ -85,10 +85,10 @@ struct ViewDemo: View {
             for await number in [1, 2, 3, 4, 5].publisher.values {
                 try await Task.sleep(for: .seconds(1))
                 numbers.append(number)
-                yield(numbers)
+                yield(.loaded(numbers))
             }
             try await Task.sleep(for: .seconds(1))
-            yield(numbers.shuffled())
+            yield(.loaded(numbers))
         }
     }
 
