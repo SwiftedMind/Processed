@@ -1,0 +1,25 @@
+{
+  "configurations" : [
+    {
+      "id" : "4AE038C9-40CF-4FF4-8176-A6155CD1CA2E",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "ProcessedTests",
+        "name" : "ProcessedTests"
+      }
+    }
+  ],
+  "version" : 1
+}
