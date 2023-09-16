@@ -29,6 +29,21 @@ public enum LoadableState<Value> {
     case loaded(Value)
 }
 
+extension LoadableState: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case .absent:
+            return "absent"
+        case .loading:
+            return "loading"
+        case .error(let error):
+            return "error(\(error.localizedDescription))"
+        case .loaded(let value):
+            return "loaded(\(value))"
+        }
+    }
+}
+
 extension LoadableState {
 
     public mutating func setAbsent() {

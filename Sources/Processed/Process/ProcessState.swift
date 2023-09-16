@@ -38,6 +38,21 @@ public enum ProcessState<ProcessKind> {
     }
 }
 
+extension ProcessState: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        switch self {
+        case .idle:
+            return "idle"
+        case .running(let processKind):
+            return "running(\(processKind))"
+        case .failed(let processKind, let error):
+            return "failed((\(processKind)), \(error.localizedDescription))"
+        case .finished(let processKind):
+            return "finished(\(processKind))"
+        }
+    }
+}
+
 extension ProcessState {
 
     // MARK: - Reset

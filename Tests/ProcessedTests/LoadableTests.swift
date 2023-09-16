@@ -1,109 +1,146 @@
+//
+//  Copyright © 2023 Dennis Müller and all collaborators
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+//
+
 import XCTest
+import SwiftUI
 @testable import Processed
+
+private struct EquatableError: Error, Equatable {}
 
 @MainActor final class LoadableTests: XCTestCase {
 
     @MainActor func testBasic() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load {
+            return 42
+        }
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42)])
     }
 
-//    @MainActor func testBasic() async throws {
-//        let loadable = Loadable<Int>()
-//        XCTAssertEqual(loadable.state, .absent)
-//
-//        let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
-//
-//        let task = Task {
-//            var states: [Loadable<Int>.LoadableState] = []
-//            for await state in loadable.$state.values {
-//                states.append(state)
-//                continuation.yield()
-//            }
-//            print(states.debugDescription)
-//        }
-//
-//        continuation.onTermination = { _ in
-//            task.cancel()
-//        }
-//
-//        // This makes sure that the for-await observation Task above is
-//        // set up and ready. Otherwise, `loadable.run` could run BEFORE the for-await loop is executed
-//        for await _ in stream { break }
-//
-//        // This starts sometimes BEFORE the for await is reached above, since it is in parallel
-//        loadable.load {
-//            return 5
-//        }
-//
-//        await loadable.task?.value
-//
-//        // TODO: Is it guaranteed, that the canceled task receives all outstanding states from loadable.run?
-//        continuation.finish()
-//    }
-//    
-//    /// Test the custom `LoadableCancellationError` that cancels the process and resets its state back to .absent
-//    @MainActor func testBasicCancellation() async throws {
-//        let loadable = Loadable<Int>()
-//        XCTAssertEqual(loadable.state, .absent)
-//
-//        let (stream, continuation) = AsyncStream.makeStream(of: Loadable<Int>.LoadableState.self)
-//
-//        let task = Task {
-//            for await state in loadable.$state.values {
-//                print(state)
-//                continuation.finish()
-//            }
-//        }
-//
-//        // This makes sure that the for-await observation Task above is
-//        // set up and ready. Otherwise, `loadable.run` could run BEFORE the for-await loop is executed
-//        for await _ in stream {}
-//
-//        // This starts sometimes BEFORE the for await is reached above, since it is in parallel
-//        loadable.load {
-//            throw LoadableCancellationError()
-//        }
-//
-//        await task.value
-//
-//        await task.value
-//    }
-//
-//    func testYielding() async throws {
-//        let loadable = Loadable<Int>()
-//
-//        Task {
-//            var expectedStates: [Loadable<Int>.LoadableState] = [.absent, .loading, .loaded(1), .loaded(2), .loaded(3)]
-//            for await state in loadable.$state.values {
-//                if expectedStates.isEmpty { break }
-//                let expectedState = expectedStates.removeFirst()
-//                XCTAssertEqual(state, expectedState)
-//            }
-//        }
-//
-//        loadable.load { yield in
-//            yield(1)
-//            yield(2)
-//            return 3
-//        }
-//    }
-//
-//    func testYieldingCancellation() async throws {
-//        let loadable = Loadable<Int>()
-//
-//        Task {
-//            var expectedStates: [Loadable<Int>.LoadableState] = [.absent, .loading, .loaded(1), .loaded(2), .loaded(3)]
-//            for await state in loadable.$state.values {
-//                if expectedStates.isEmpty { break }
-//                let expectedState = expectedStates.removeFirst()
-//                XCTAssertEqual(state, expectedState)
-//            }
-//        }
-//
-//        loadable.load { yield in
-//            yield(1)
-//            yield(2)
-//            return 3
-//        }
-//    }
+    @MainActor func testBasicYielding() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
 
+        await manager.load { yield in
+            yield(42)
+            yield(73)
+        }
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .loaded(73)])
+    }
+
+    @MainActor func testMultipleYielding() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load { yield in
+            yield(42)
+            yield(73)
+        }
+
+        await manager.load { yield in
+            yield(100)
+        }
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .loaded(73), .loading, .loaded(100)])
+    }
+
+    @MainActor func testRunSilently() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load(silently: true) {
+            return 42
+        }
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loaded(42)])
+    }
+
+    @MainActor func testRunSilentlyWithYielding() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load(silently: true) { yield in
+            yield(42)
+        }
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loaded(42)])
+    }
+
+    @MainActor func testReset() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load {
+            return 42
+        }
+
+        manager.reset()
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .absent])
+    }
+
+    @MainActor func testResetThrow() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load {
+            throw LoadableReset()
+        }
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading])
+    }
+
+    @MainActor func testResetThrowAndCancel() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        await manager.load {
+            throw LoadableReset()
+        }
+
+        manager.cancel()
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading])
+    }
+
+    @MainActor func testCancel() async throws {
+        let container = LoadableContainer<Int>()
+        let manager = Loadable.Manager(state: container.stateBinding, task: container.taskBinding)
+
+        let task = Task {
+            await manager.load {
+                try await Task.sleep(nanoseconds: 2 * NSEC_PER_SEC)
+                XCTFail("Should not get here!")
+                return 0
+            }
+        }
+
+        task.cancel()
+        await task.value
+
+        XCTAssertEqual(container.stateHistory, [.absent, .loading,])
+    }
 }

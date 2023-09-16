@@ -72,6 +72,8 @@ extension Loadable {
             cancel()
         }
 
+        // MARK: - Run Loadable With Yielding
+
         @discardableResult public func load(
             silently runSilently: Bool = false,
             priority: TaskPriority? = nil,
@@ -79,18 +81,7 @@ extension Loadable {
         ) -> Task<Void, Never> {
             cancel()
             let task = Task(priority: priority) {
-                do {
-                    if !runSilently { state = .loading }
-                    try await block { result in
-                        state = .loaded(result)
-                    }
-                } catch is CancellationError {
-                    // Task was cancelled. Don't change the state anymore
-                } catch is LoadableReset {
-                    cancel()
-                } catch {
-                    state = .error(error)
-                }
+                await load(silently: runSilently, priority: priority, block: block)
             }
             self.task = task
             return task
@@ -101,8 +92,21 @@ extension Loadable {
             priority: TaskPriority? = nil,
             block: @escaping (_ yield: (_ result: Value) -> Void) async throws -> Void
         ) async {
-            await load(silently: runSilently, priority: priority, block: block).value
+            do {
+                if !runSilently { state = .loading }
+                try await block { result in
+                    state = .loaded(result)
+                }
+            } catch is CancellationError {
+                // Task was cancelled. Don't change the state anymore
+            } catch is LoadableReset {
+                cancel()
+            } catch {
+                state = .error(error)
+            }
         }
+
+        // MARK: - Run Loadable With Result
 
         @discardableResult public func load(
             silently runSilently: Bool = false,
@@ -111,16 +115,7 @@ extension Loadable {
         ) -> Task<Void, Never> {
             cancel()
             let task = Task(priority: priority) {
-                do {
-                    if !runSilently { state = .loading }
-                    state = try await .loaded(block())
-                } catch is CancellationError {
-                    // Task was cancelled. Don't change the state anymore
-                } catch is LoadableReset {
-                    cancel()
-                } catch {
-                    state = .error(error)
-                }
+                await load(silently: runSilently, priority: priority, block: block)
             }
             self.task = task
             return task
@@ -131,7 +126,16 @@ extension Loadable {
             priority: TaskPriority? = nil,
             block: @escaping () async throws -> Value
         ) async {
-            await load(silently: runSilently, priority: priority, block: block).value
+            do {
+                if !runSilently { state = .loading }
+                state = try await .loaded(block())
+            } catch is CancellationError {
+                // Task was cancelled. Don't change the state anymore
+            } catch is LoadableReset {
+                cancel()
+            } catch {
+                state = .error(error)
+            }
         }
     }
 }

@@ -25,17 +25,23 @@ import SwiftUI
 /// A unique identifier for a process.
 public struct UniqueProcessKind: Equatable, Sendable {
     /// The unique identifier for the process.
-    var processId: UUID
+    var id: String
     /// The date when the process was initialized.
     var initializedAt: Date
 
     /// Initializes a new unique process.
     /// - Parameters:
-    ///   - processId: The unique identifier for the process. Defaults to a new UUID.
+    ///   - id: The unique identifier for the process. Defaults to a new UUID.
     ///   - initializedAt: The date when the process was initialized. Defaults to current date and time.
-    public init(processId: UUID = .init(), initializedAt: Date = .now) {
-        self.processId = processId
+    public init(id: String = UUID().uuidString, initializedAt: Date = .now) {
+        self.id = id
         self.initializedAt = initializedAt
+    }
+}
+
+extension UniqueProcessKind: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "\(id)"
     }
 }
 
@@ -84,16 +90,16 @@ extension Process {
         @Binding var state: ProcessState<ProcessKind>
         @Binding var task: Task<Void, Never>?
 
-        /// Cancels the ongoing process and its underlying task, if there is one, and optionally resets the process state to idle.
-        /// - Parameter reset: Whether to reset the process state to `.idle`. Defaults to `true`.
-        public func cancel(reset: Bool = true) {
-            if reset { 
-                if case .idle = state {} else {
-                    state = .idle
-                }
-            }
+        public func cancel() {
             task?.cancel()
             task = nil
+        }
+
+        public func reset() {
+            if case .idle = state {} else {
+                state = .idle
+            }
+            cancel()
         }
 
         // MARK: - Run
@@ -111,7 +117,7 @@ extension Process {
             priority: TaskPriority? = nil,
             block: @escaping () async throws -> Void
         ) -> Task<Void, Never> {
-            cancel(reset: false)
+            cancel()
             let task = Task(priority: priority) {
                 await runTaskBody(process: process, runSilently: runSilently, block: block)
             }
@@ -124,7 +130,7 @@ extension Process {
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
         ) async {
-            await run(process, silently: runSilently, block: block).value
+            await runTaskBody(process: process, runSilently: runSilently, block: block)
         }
 
         public func run(
@@ -138,7 +144,7 @@ extension Process {
             silently runSilently: Bool = false,
             block: @escaping () async throws -> Void
         ) async where ProcessKind == UniqueProcessKind {
-            await run(.init(), silently: runSilently, block: block).value
+            await runTaskBody(process: .init(), runSilently: runSilently, block: block)
         }
 
         // MARK: - Run Detached
@@ -156,7 +162,7 @@ extension Process {
             priority: TaskPriority? = nil,
             block: @escaping () async throws -> Void
         ) -> Task<Void, Never> {
-            cancel(reset: false)
+            cancel()
             let task = Task.detached(priority: priority) {
                 await runTaskBody(process: process, runSilently: runSilently, block: block)
             }

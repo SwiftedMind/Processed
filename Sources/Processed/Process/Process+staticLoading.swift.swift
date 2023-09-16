@@ -30,7 +30,23 @@ public protocol Processable where Self: ObservableObject {
 
     func run<ProcessKind>(
         _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+        as processKind: ProcessKind,
+        silently runSilently: Bool,
+        priority: TaskPriority?,
+        block: @escaping () async throws -> Void
+    )
+
+    func run<ProcessKind>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
         as process: ProcessKind,
+        silently runSilently: Bool,
+        priority: TaskPriority?,
+        block: @escaping () async throws -> Void
+    ) async
+
+    func run(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
+        as processKind: UniqueProcessKind,
         silently runSilently: Bool,
         priority: TaskPriority?,
         block: @escaping () async throws -> Void
@@ -38,15 +54,16 @@ public protocol Processable where Self: ObservableObject {
 
     func run(
         _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
+        as processKind: UniqueProcessKind,
         silently runSilently: Bool,
         priority: TaskPriority?,
         block: @escaping () async throws -> Void
-    )
+    ) async
 }
 
-public extension Processable {
+extension Processable {
 
-    func cancelProcess<ProcessKind>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>) {
+    @MainActor public func cancelProcess<ProcessKind>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>) {
         let identifier = ProcessIdentifier(
             identifier: ObjectIdentifier(self),
             keyPath: processState
@@ -55,35 +72,57 @@ public extension Processable {
         tasks.removeValue(forKey: identifier)
     }
 
-    @MainActor
-    func run<ProcessKind>(
+    @MainActor public func run<ProcessKind>(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+        as processKind: ProcessKind,
+        silently runSilently: Bool = false,
+        priority: TaskPriority? = nil,
+        block: @escaping () async throws -> Void
+    ) {
+        let identifier = ProcessIdentifier(
+            identifier: ObjectIdentifier(self),
+            keyPath: processState
+        )
+        tasks[identifier]?.cancel()
+        tasks[identifier] = Task(priority: priority) {
+            defer { // Cleanup
+                tasks[identifier] = nil
+            }
+            await run(
+                processState,
+                as: processKind,
+                silently: runSilently,
+                priority: priority,
+                block: block
+            )
+        }
+    }
+
+    @MainActor public func run<ProcessKind>(
         _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
         as process: ProcessKind,
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
-    ) {
-        let identifier = ProcessIdentifier(
-            identifier: ObjectIdentifier(self),
-            keyPath: processState
-        )
-        tasks[identifier]?.cancel()
-        tasks[identifier] = Task(priority: priority) {
-            defer { // Cleanup
-                tasks[identifier] = nil
+    ) async {
+        do {
+            if !runSilently {
+                self[keyPath: processState] = .running(process)
             }
-            await runTaskBody(
-                processState: processState,
-                process: process,
-                runSilently: runSilently,
-                block: block
-            )
+            try await block()
+            self[keyPath: processState] = .finished(process)
+        } catch is CancellationError {
+            // Task was cancelled. Don't change the state anymore
+        } catch is ProcessReset {
+            self[keyPath: processState] = .idle
+        } catch {
+            self[keyPath: processState] = .failed(process: process, error: error)
         }
     }
 
-    @MainActor
-    func run(
+    @MainActor public func run(
         _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
+        as process: UniqueProcessKind = .init(),
         silently runSilently: Bool = false,
         priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
@@ -97,21 +136,21 @@ public extension Processable {
             defer { // Cleanup
                 tasks[identifier] = nil
             }
-            await runTaskBody(
-                processState: processState,
-                process: .init(),
-                runSilently: runSilently,
+            await run(
+                processState,
+                as: process,
+                silently: runSilently,
+                priority: priority,
                 block: block
             )
         }
     }
 
-    // MARK: - Internal
-
-    private func runTaskBody<ProcessKind>(
-        processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
-        process: ProcessKind,
-        runSilently: Bool,
+    @MainActor public func run(
+        _ processState: ReferenceWritableKeyPath<Self, ProcessState<UniqueProcessKind>>,
+        as process: UniqueProcessKind = .init(),
+        silently runSilently: Bool = false,
+        priority: TaskPriority? = nil,
         block: @escaping () async throws -> Void
     ) async {
         do {
