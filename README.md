@@ -40,7 +40,6 @@ struct DemoView: View {
         }
       }
     }
-    .animation(.default, value: numbers)
   }
 }
 ```
@@ -149,7 +148,7 @@ And that's exactly what Processed helps with. It hides that boilerplate behind a
 
 ### LoadableState
 
-Processed defines a `LoadableState` enum that can be used to represent the loading state of some data. It also comes with a lot of handy convenient properties and methods, like `.isLoading`, `.setLoading`, `.data` etc.
+Processed defines a `LoadableState` enum that can be used to represent the loading state of some data. It also comes with a lot of handy properties and methods, like `.isLoading`, `.setLoading()`, `.data` etc.
 
 ```swift
 enum LoadableState<Value> {
@@ -167,7 +166,7 @@ Building on top of this type, Processed defines the `@Loadable` property wrapper
   public var wrappedValue: LoadableState<Value> { get nonmutating set }
   public var projectedValue: Loadable<Value>.Binding { get }
   public init(wrappedValue initialState: LoadableState<Value> = .absent)
-  public struct Binding { /* ... */ }
+  @propertyWrapper public struct Binding { /* ... */ }
 }
 ```
 
@@ -194,7 +193,6 @@ struct DemoView: View {
         }
       }
     }
-    .animation(.default, value: numbers)
   }
   
   @MainActor func loadNumbers() {
@@ -224,7 +222,9 @@ To cancel an ongoing task, simply call `$numbers.cancel()` or throw a `CancelLoa
 <details>
   <summary>Use LoadableState in Classes</summary>
   
- If you prefer to keep your state in a view model, or if you would like to use Processed completeley outside of SwiftUI, you can also do all the things from above inside a class. However, it works slightly different because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
+If you prefer to keep your state in a view model, or if you would like to use Processed completeley outside of SwiftUI, you can also do all the things from above inside a class. However, it works slightly differently because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
+
+You simply have to conform your class to the `LoadableSupport` protocol that implements the same `load`, `cancel` and `reset`  methods as the `@Loadable` property wrapper, but this time defined on `self`:
 
 ```swift
 @MainActor final class ViewModel: ObservableObject, ProcessSupport, LoadableSupport {
@@ -249,13 +249,11 @@ To cancel an ongoing task, simply call `$numbers.cancel()` or throw a `CancelLoa
 ```
 </details>
 
-#### Use in Classes
-
-
 ### ProcessState
 
+Processed also defines a `ProcessState` enum that can be used to represent the state of a generic process, like logging in, saving something or a deletion. Just as `LoadableState`, it comes with a lot of handy properties and methods, like `.isRunning`, `.setFinished()`, `.error`, etc.
+
 ```swift
-// ProcessID is used to identify a process, so that you can share a process state across different tasks
 enum ProcessState<ProcessID> {
   case idle
   case running(ProcessID)
@@ -264,8 +262,52 @@ enum ProcessState<ProcessID> {
 }
 ```
 
-`LoadableState` is useful to represent the loading state of some data, while `ProcessState` does the same for generic processes without an actual, direct result.
+`ProcessState` is generic over a `ProcessID`, which is some value that identifies a specific process. This is useful if you have multiple processes that shouldn't run in parallel.
 
+Building on top of this type, Processed defines the `@Process` property wrapper:
+
+```swift
+@propertyWrapper public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
+  public var wrappedValue: ProcessState<ProcessID> { get nonmutating set }
+  public var projectedValue: Binding { get }
+  public init(initialState: ProcessState<ProcessID> = .idle)
+  public init() where ProcessID == SingleProcess
+  @propertyWrapper public struct Binding { /* ... */ }
+}
+```
+
+It works similarly to `@Loadable`, but with slightly better fitting semantics around type and method names. One thing of note is the empty initializer, that allows you to omit the generic specification if you only need to represent a single type of process.
+
+Let's look at an example:
+
+```swift
+struct DemoView: View {
+  @Process var importantProcess // Compiler infers @Process<SingleProcess>
+  
+  var body: some View {
+    List {
+      Button("Reload") { doSomething() }
+      .disabled(numbers.isLoading)
+      switch importantProcess {
+      case .idle: 
+        Text("Idle")
+      case .running: 
+        Text("Running")
+      case .failed(let error): 
+        Text("\(error.localizedDescription)")
+      case .finished:
+        Text("Finished")
+      }
+    }
+  }
+  
+  @MainActor func doSomething() {
+    $importantProcess.run {
+      try await Task.sleep(for: .seconds(5))
+    }
+  }
+}
+```
 
 ### In SwiftUI Views
 
