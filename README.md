@@ -75,7 +75,7 @@ Go to `File` > `Add Packages...` and enter the URL "https://github.com/SwiftedMi
 
 ## Documentation
 
-_Coming soon_
+You can find the documentation here: [https://swiftpackageindex.com/SwiftedMind/Processed/0.5.0/documentation/processed](https://swiftpackageindex.com/SwiftedMind/Processed/0.5.0/documentation/processed)
 
 ## Background
 
