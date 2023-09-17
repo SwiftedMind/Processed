@@ -35,7 +35,114 @@ final class ProcessInClassTests: XCTestCase {
       return
     }
     
-    XCTAssertEqual(container.stateHistory, [.idle, .running(process), .finished(process)])
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .finished(process)])
+  }
+
+  @MainActor func testReset() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    
+    await container.run(\.process, as: process) {
+      return
+    }
+
+    container.reset(\.process)
+
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .finished(process), .idle])
+  }
+
+  @MainActor func testCancel() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+
+    let task = Task {
+      await container.run(\.process, as: process) {
+        try await Task.sleep(nanoseconds: 2 * NSEC_PER_SEC)
+        XCTFail("Should not get here!")
+      }
+    }
+
+    task.cancel()
+    await task.value
+
+    XCTAssertEqual(container.processHistory, [.idle, .running(process)])
+  }
+
+  @MainActor func testResetError() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+
+    await container.run(\.process, as: process) {
+      throw CancelProcess()
+    }
+
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .idle])
+  }
+
+  @MainActor func testErrorStates() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+
+    await container.run(\.process, as: process) {
+      throw EquatableError()
+    }
+
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .failed(process: process, error: EquatableError())])
+  }
+
+  @MainActor func testRunSilently() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+
+    await container.run(\.process, as: process, silently: true) {
+      return
+    }
+
+    XCTAssertEqual(container.processHistory, [.idle, .finished(process)])
+  }
+
+  @MainActor func testRunTwice() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    let secondProcess = SingleProcess(id: "2")
+
+    await container.run(\.process, as: process) {
+      return
+    }
+
+    await container.run(\.process, as: secondProcess) {
+      return
+    }
+
+    XCTAssertEqual(container.processHistory, [
+      .idle,
+      .running(process),
+      .finished(process),
+      .running(secondProcess),
+      .finished(secondProcess)
+    ])
+  }
+
+  @MainActor func testRunTwiceFailFirst() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    let secondProcess = SingleProcess(id: "2")
+
+    await container.run(\.process, as: process) {
+      throw EquatableError()
+    }
+
+    await container.run(\.process, as: secondProcess) {
+      return
+    }
+
+    XCTAssertEqual(container.processHistory, [
+      .idle,
+      .running(process),
+      .failed(process: process, error: EquatableError()),
+      .running(secondProcess),
+      .finished(secondProcess)
+    ])
   }
 }
 

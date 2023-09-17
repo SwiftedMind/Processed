@@ -34,13 +34,27 @@ public protocol LoadableSupport: AnyObject {
     priority: TaskPriority?,
     block: @escaping () async throws -> Value
   )
-  
+
+  func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+    silently runSilently: Bool,
+    priority: TaskPriority?,
+    block: @escaping () async throws -> Value
+  ) async
+
   func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
     block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   )
+
+  func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+    silently runSilently: Bool,
+    priority: TaskPriority?,
+    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+  ) async
 }
 
 extension LoadableSupport {
@@ -73,24 +87,36 @@ extension LoadableSupport {
     )
     tasks[identifier]?.cancel()
     tasks[identifier] = Task(priority: priority) {
-      defer {
-        // Cleanup
+      defer { // Cleanup
         tasks[identifier] = nil
       }
-      
-      do {
-        if !runSilently { self[keyPath: loadableState] = .loading }
-        self[keyPath: loadableState] = try await .loaded(block())
-      } catch is CancellationError {
-        // Task was cancelled. Don't change the state anymore
-      } catch is CancelLoadable {
-        self[keyPath: loadableState] = .absent
-      } catch {
-        self[keyPath: loadableState] = .error(error)
-      }
+      await load(
+        loadableState,
+        silently: runSilently,
+        priority: priority,
+        block: block
+      )
     }
   }
-  
+
+  public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    block: @escaping () async throws -> Value
+  ) async {
+    do {
+      if !runSilently { self[keyPath: loadableState] = .loading }
+      self[keyPath: loadableState] = try await .loaded(block())
+    } catch is CancellationError {
+      // Task was cancelled. Don't change the state anymore
+    } catch is CancelLoadable {
+      self[keyPath: loadableState] = .absent
+    } catch {
+      self[keyPath: loadableState] = .error(error)
+    }
+  }
+
   public func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
@@ -103,23 +129,35 @@ extension LoadableSupport {
     )
     tasks[identifier]?.cancel()
     tasks[identifier] = Task(priority: priority) {
-      defer {
-        // Cleanup
+      defer { // Cleanup
         tasks[identifier] = nil
       }
-      
-      do {
-        if !runSilently { self[keyPath: loadableState] = .loading }
-        try await block { state in
-          self[keyPath: loadableState] = state
-        }
-      } catch is CancellationError {
-        // Task was cancelled. Don't change the state anymore
-      } catch is CancelLoadable {
-        self[keyPath: loadableState] = .absent
-      } catch {
-        self[keyPath: loadableState] = .error(error)
+      await load(
+        loadableState,
+        silently: runSilently,
+        priority: priority,
+        block: block
+      )
+    }
+  }
+
+  public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+  ) async {
+    do {
+      if !runSilently { self[keyPath: loadableState] = .loading }
+      try await block { state in
+        self[keyPath: loadableState] = state
       }
+    } catch is CancellationError {
+      // Task was cancelled. Don't change the state anymore
+    } catch is CancelLoadable {
+      self[keyPath: loadableState] = .absent
+    } catch {
+      self[keyPath: loadableState] = .error(error)
     }
   }
 }

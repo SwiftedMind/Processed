@@ -224,7 +224,7 @@ To cancel an ongoing task, simply call `$numbers.cancel()` or throw a `CancelLoa
 <details>
   <summary>Use LoadableState in Classes</summary>
   
-If you prefer to keep your state in a view model, or if you would like to use Processed completeley outside of SwiftUI, you can also do all the things from above inside a class. However, it works slightly differently because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
+If you prefer to keep your state in a view model, or if you would like to use Processed completely outside of SwiftUI, you can also do all the things from above inside a class. However, it works slightly differently because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
 
 You simply have to conform your class to the `LoadableSupport` protocol that implements the same `load`, `cancel` and `reset`  methods as the `@Loadable` property wrapper, but this time defined on `self`:
 

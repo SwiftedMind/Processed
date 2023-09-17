@@ -37,7 +37,7 @@ final class ProcessTests: XCTestCase {
       return
     }
     
-    XCTAssertEqual(container.stateHistory, [.idle, .running(process), .finished(process)])
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .finished(process)])
   }
   
   @MainActor func testReset() async throws {
@@ -51,7 +51,7 @@ final class ProcessTests: XCTestCase {
     
     binding.reset()
     
-    XCTAssertEqual(container.stateHistory, [.idle, .running(process), .finished(process), .idle])
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .finished(process), .idle])
   }
   
   @MainActor func testCancel() async throws {
@@ -69,7 +69,7 @@ final class ProcessTests: XCTestCase {
     task.cancel()
     await task.value
     
-    XCTAssertEqual(container.stateHistory, [.idle, .running(process)])
+    XCTAssertEqual(container.processHistory, [.idle, .running(process)])
   }
   
   @MainActor func testResetError() async throws {
@@ -81,7 +81,7 @@ final class ProcessTests: XCTestCase {
       throw CancelProcess()
     }
     
-    XCTAssertEqual(container.stateHistory, [.idle, .running(process)])
+    XCTAssertEqual(container.processHistory, [.idle, .running(process)])
   }
   
   @MainActor func testErrorStates() async throws {
@@ -93,7 +93,7 @@ final class ProcessTests: XCTestCase {
       throw EquatableError()
     }
     
-    XCTAssertEqual(container.stateHistory, [.idle, .running(process), .failed(process: process, error: EquatableError())])
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .failed(process: process, error: EquatableError())])
   }
   
   @MainActor func testRunSilently() async throws {
@@ -105,7 +105,7 @@ final class ProcessTests: XCTestCase {
       return
     }
     
-    XCTAssertEqual(container.stateHistory, [.idle, .finished(process)])
+    XCTAssertEqual(container.processHistory, [.idle, .finished(process)])
   }
   
   @MainActor func testRunTwice() async throws {
@@ -122,7 +122,7 @@ final class ProcessTests: XCTestCase {
       return
     }
     
-    XCTAssertEqual(container.stateHistory, [
+    XCTAssertEqual(container.processHistory, [
       .idle,
       .running(process),
       .finished(process),
@@ -145,7 +145,7 @@ final class ProcessTests: XCTestCase {
       return
     }
     
-    XCTAssertEqual(container.stateHistory, [
+    XCTAssertEqual(container.processHistory, [
       .idle,
       .running(process),
       .failed(process: process, error: EquatableError()),

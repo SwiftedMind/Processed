@@ -24,15 +24,15 @@
 import SwiftUI
 
 @MainActor final class ProcessContainer<ProcessID>: ProcessSupport {
-  private(set) var stateHistory: [ProcessState<ProcessID>]
+  private(set) var processHistory: [ProcessState<ProcessID>]
   var task: Task<Void, Never>?
   var process: ProcessState<ProcessID> {
-    didSet { stateHistory.append(process) }
+    didSet { processHistory.append(process) }
   }
   
   init(initialState: ProcessState<ProcessID> = .idle) {
     self.process = initialState
-    self.stateHistory = [process]
+    self.processHistory = [process]
   }
   
   var taskBinding: Binding<Task<Void, Never>?> {

@@ -164,6 +164,7 @@ extension ProcessSupport {
         self[keyPath: processState] = .running(process)
       }
       try await block()
+      print("JOJO")
       self[keyPath: processState] = .finished(process)
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore

@@ -30,30 +30,30 @@ private struct EquatableError: Error, Equatable {}
   
   @MainActor func testBasic() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load {
       return 42
     }
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42)])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .loaded(42)])
   }
   
   @MainActor func testBasicYielding() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load { yield in
       yield(.loaded(42))
       yield(.loaded(73))
     }
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .loaded(73)])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .loaded(42), .loaded(73)])
   }
   
   @MainActor func testMultipleYielding() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load { yield in
       yield(.loaded(42))
@@ -64,34 +64,34 @@ private struct EquatableError: Error, Equatable {}
       yield(.loaded(100))
     }
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .loaded(73), .loading, .loaded(100)])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .loaded(42), .loaded(73), .loading, .loaded(100)])
   }
   
   @MainActor func testRunSilently() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load(silently: true) {
       return 42
     }
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loaded(42)])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loaded(42)])
   }
   
   @MainActor func testRunSilentlyWithYielding() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load(silently: true) { yield in
       yield(.loaded(42))
     }
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loaded(42)])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loaded(42)])
   }
   
   @MainActor func testReset() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load {
       return 42
@@ -99,23 +99,23 @@ private struct EquatableError: Error, Equatable {}
     
     binding.reset()
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading, .loaded(42), .absent])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .loaded(42), .absent])
   }
   
   @MainActor func testResetThrow() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load {
       throw CancelLoadable()
     }
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading])
   }
   
   @MainActor func testResetThrowAndCancel() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     await binding.load {
       throw CancelLoadable()
@@ -123,12 +123,12 @@ private struct EquatableError: Error, Equatable {}
     
     binding.cancel()
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading])
   }
   
   @MainActor func testCancel() async throws {
     let container = LoadableContainer<Int>()
-    let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
     
     let task = Task {
       await binding.load {
@@ -141,6 +141,6 @@ private struct EquatableError: Error, Equatable {}
     task.cancel()
     await task.value
     
-    XCTAssertEqual(container.stateHistory, [.absent, .loading,])
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading,])
   }
 }

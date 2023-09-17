@@ -23,16 +23,16 @@
 @testable import Processed
 import SwiftUI
 
-@MainActor class LoadableContainer<Value> {
-  private(set) var stateHistory: [LoadableState<Value>]
+@MainActor final class LoadableContainer<Value>: LoadableSupport {
+  private(set) var loadableHistory: [LoadableState<Value>]
   var task: Task<Void, Never>?
-  var state: LoadableState<Value> {
-    didSet { stateHistory.append(state) }
+  var loadable: LoadableState<Value> {
+    didSet { loadableHistory.append(loadable) }
   }
   
   init(initialState: LoadableState<Value> = .absent) {
-    self.state = initialState
-    self.stateHistory = [state]
+    self.loadable = initialState
+    self.loadableHistory = [loadable]
   }
   
   var taskBinding: Binding<Task<Void, Never>?> {
@@ -43,11 +43,11 @@ import SwiftUI
     }
   }
   
-  var stateBinding: Binding<LoadableState<Value>> {
+  var loadableBinding: Binding<LoadableState<Value>> {
     .init {
-      self.state
+      self.loadable
     } set: { newValue in
-      self.state = newValue
+      self.loadable = newValue
     }
   }
 }
