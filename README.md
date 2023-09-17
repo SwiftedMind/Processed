@@ -6,6 +6,8 @@
 # Processed
 
 ![GitHub tag (with filter)](https://img.shields.io/github/v/tag/SwiftedMind/Processed)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSwiftedMind%2FProcessed%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/SwiftedMind/Processed)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSwiftedMind%2FProcessed%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/SwiftedMind/Processed)
 ![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
 
 Processed is a lightweight wrapper around the handling of loading states in SwiftUI, reducing repetitive boilerplate code and improving code readability. It works in SwiftUI views via two property wrappers (`@Loadable` and `@Process`) as well as in arbitrary classes using the `LoadableSupport` and `ProcessSupport` protocols. It also support full manual state control for situations where the defaults don't work as needed.
