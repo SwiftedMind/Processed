@@ -20,38 +20,52 @@
 //  SOFTWARE.
 //
 
-import Foundation
+import SwiftUI
+import Processed
 
-public enum AttemptResult: Sendable {
-    case attemptAgain
-    case attemptCompleted
+enum LoadingState<Value> {
+  case absent
+  case loading
+  case error(Error)
+  case loaded(Value)
 }
 
-public struct TooManyAttemptsError: Swift.Error, Sendable {}
+struct DemoView2: View {
 
-/// Performs the given block until completion, retrying until a limit has been reached.
-///
-/// - Parameters:
-///   - allowedRetries: The number of allowed retries.
-///   - retryDelay: The delay between attempts.
-///   - block: The block to perform
-@available(iOS 16.0, *)
-@MainActor public func runRepeatedly(
-    allowedAttempts: Int = 5,
-    retryDelay: Duration = .seconds(5),
-    _ block: (_ currentAttempt: Int) async -> AttemptResult
-) async throws {
-    var currentAttempt = 1
-    while currentAttempt <= allowedAttempts {
-        try Task.checkCancellation()
-        let result = await block(currentAttempt)
-        switch result {
-        case .attemptAgain:
-            try await Task.sleep(for: retryDelay)
-            currentAttempt += 1
-        case .attemptCompleted:
-            return
+  @State var numbers: LoadingState<[Int]> = .absent
+  @State var task: Task<Void, Never>?
+
+  var body: some View {
+    List {
+      Button("Load Numbers") {
+        loadNumbers()
+      }
+      switch numbers {
+      case .absent:
+        EmptyView()
+      case .loading:
+        ProgressView()
+          .frame(height: .infinity)
+      case .error(let error):
+        Text("An error occurred: \(error.localizedDescription)")
+      case .loaded(let numbers):
+        ForEach(numbers, id: \.self) { number in
+          Text(String(number))
         }
+      }
     }
-    throw TooManyAttemptsError()
+  }
+
+  @MainActor func loadNumbers() {
+//    $numbers.load {
+//      try await Task.sleep(for: .seconds(2))
+//      return [0, 1, 2, 42, 73]
+//    }
+  }
+}
+
+
+
+#Preview {
+  DemoView2()
 }

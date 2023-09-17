@@ -24,56 +24,56 @@ import SwiftUI
 import Processed
 
 struct Root: View {
-
-    enum Destination: Hashable, CaseIterable {
-        case viewDemo
-        case viewModelDemo
-
-        var title: String {
-            switch self {
-            case .viewDemo: "View Demo"
-            case .viewModelDemo: "ViewModel Demo"
-            }
-        }
-
-        var description: String {
-            switch self {
-            case .viewDemo: "See how you can use the @Loadable and @Process property wrappers directly in your views."
-            case .viewModelDemo: "See how to use LoadableState and ProcessState in an ObservableObject."
-            }
-        }
+  
+  enum Destination: Hashable, CaseIterable {
+    case viewDemo
+    case viewModelDemo
+    
+    var title: String {
+      switch self {
+      case .viewDemo: "View Demo"
+      case .viewModelDemo: "ViewModel Demo"
+      }
     }
-
-    @State var path: [Destination] = []
-
-    var body: some View {
-        NavigationStack(path: $path) {
-            List {
-                ForEach(Destination.allCases, id: \.self) { destination in
-                    NavigationLink(value: destination) {
-                        VStack(alignment: .leading) {
-                            Text(destination.title)
-                            Text(destination.description)
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-            }
-            .navigationTitle("Demos")
-            .navigationDestination(for: Destination.self) { destination in
-                switch destination {
-                case .viewDemo:
-                    ViewDemo()
-                case .viewModelDemo:
-                    ViewModelDemo()
-                }
-            }
-        }
+    
+    var description: String {
+      switch self {
+      case .viewDemo: "See how you can use the @Loadable and @Process property wrappers directly in your views."
+      case .viewModelDemo: "See how to use LoadableState and ProcessState in an ObservableObject."
+      }
     }
+  }
+  
+  @State var path: [Destination] = []
+  
+  var body: some View {
+    NavigationStack(path: $path) {
+      List {
+        ForEach(Destination.allCases, id: \.self) { destination in
+          NavigationLink(value: destination) {
+            VStack(alignment: .leading) {
+              Text(destination.title)
+              Text(destination.description)
+                .foregroundStyle(.secondary)
+                .font(.caption)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+      }
+      .navigationTitle("Demos")
+      .navigationDestination(for: Destination.self) { destination in
+        switch destination {
+        case .viewDemo:
+          ViewDemo()
+        case .viewModelDemo:
+          ViewModelDemo()
+        }
+      }
+    }
+  }
 }
 
 #Preview {
-    Root().preferredColorScheme(.dark)
+  Root().preferredColorScheme(.dark)
 }

@@ -23,18 +23,18 @@
 import SwiftUI
 
 private struct IsLoadingKey: EnvironmentKey {
-    static let defaultValue = false
+  static let defaultValue = false
 }
 
 extension EnvironmentValues {
-    var isLoading: Bool {
-        get { self[IsLoadingKey.self] }
-        set { self[IsLoadingKey.self] = newValue }
-    }
+  var isLoading: Bool {
+    get { self[IsLoadingKey.self] }
+    set { self[IsLoadingKey.self] = newValue }
+  }
 }
 
 extension View {
-    func isLoading(_ isLoading: Bool = true) -> some View {
-        environment(\.isLoading, isLoading)
-    }
+  func isLoading(_ isLoading: Bool = true) -> some View {
+    environment(\.isLoading, isLoading)
+  }
 }

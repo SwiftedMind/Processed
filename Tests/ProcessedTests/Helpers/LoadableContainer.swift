@@ -24,30 +24,30 @@
 import SwiftUI
 
 @MainActor class LoadableContainer<Value> {
-    private(set) var stateHistory: [LoadableState<Value>]
-    var task: Task<Void, Never>?
-    var state: LoadableState<Value> {
-        didSet { stateHistory.append(state) }
+  private(set) var stateHistory: [LoadableState<Value>]
+  var task: Task<Void, Never>?
+  var state: LoadableState<Value> {
+    didSet { stateHistory.append(state) }
+  }
+  
+  init(initialState: LoadableState<Value> = .absent) {
+    self.state = initialState
+    self.stateHistory = [state]
+  }
+  
+  var taskBinding: Binding<Task<Void, Never>?> {
+    .init {
+      self.task
+    } set: { newValue in
+      self.task = newValue
     }
-
-    init(initialState: LoadableState<Value> = .absent) {
-        self.state = initialState
-        self.stateHistory = [state]
+  }
+  
+  var stateBinding: Binding<LoadableState<Value>> {
+    .init {
+      self.state
+    } set: { newValue in
+      self.state = newValue
     }
-
-    var taskBinding: Binding<Task<Void, Never>?> {
-        .init {
-            self.task
-        } set: { newValue in
-            self.task = newValue
-        }
-    }
-
-    var stateBinding: Binding<LoadableState<Value>> {
-        .init {
-            self.state
-        } set: { newValue in
-            self.state = newValue
-        }
-    }
+  }
 }

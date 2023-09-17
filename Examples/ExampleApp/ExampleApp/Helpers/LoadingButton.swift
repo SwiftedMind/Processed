@@ -23,41 +23,41 @@
 import SwiftUI
 
 struct LoadingButton<Label: View>: View {
-    @Environment(\.isLoading) private var isLoading
-
-    var role: ButtonRole?
-    var action: () -> Void
-    var label: Label
-
-    public init(role: ButtonRole? = nil, action: @escaping () -> Void, @ViewBuilder label: () -> Label) {
-        self.role = role
-        self.action = action
-        self.label = label()
-    }
-
-    public init(_ localizedTitle: LocalizedStringKey, role: ButtonRole? = nil, action: @escaping () -> Void) where Label == Text {
-        self.action = action
-        self.role = role
-        self.label = Text(localizedTitle)
-    }
-
-    public init(_ title: String, role: ButtonRole? = nil, action: @escaping () -> Void) where Label == Text {
-        self.action = action
-        self.role = role
-        self.label = Text(title)
-    }
-
-    var body: some View {
-        Button(role: role) {
-            action()
-        } label: {
-            HStack {
-                label
-                Spacer()
-                if isLoading {
-                    ProgressView()
-                }
-            }
+  @Environment(\.isLoading) private var isLoading
+  
+  var role: ButtonRole?
+  var action: () -> Void
+  var label: Label
+  
+  public init(role: ButtonRole? = nil, action: @escaping () -> Void, @ViewBuilder label: () -> Label) {
+    self.role = role
+    self.action = action
+    self.label = label()
+  }
+  
+  public init(_ localizedTitle: LocalizedStringKey, role: ButtonRole? = nil, action: @escaping () -> Void) where Label == Text {
+    self.action = action
+    self.role = role
+    self.label = Text(localizedTitle)
+  }
+  
+  public init(_ title: String, role: ButtonRole? = nil, action: @escaping () -> Void) where Label == Text {
+    self.action = action
+    self.role = role
+    self.label = Text(title)
+  }
+  
+  var body: some View {
+    Button(role: role) {
+      action()
+    } label: {
+      HStack {
+        label
+        Spacer()
+        if isLoading {
+          ProgressView()
         }
+      }
     }
+  }
 }

@@ -21,26 +21,45 @@
 //
 
 import SwiftUI
+import Processed
 
-/// A unique identifier for a process.
-public struct SingleProcess: Equatable, Sendable {
-  /// The unique identifier for the process.
-  var id: String
-  /// The date when the process was initialized.
-  var initializedAt: Date
+struct DemoView: View {
   
-  /// Initializes a new unique process.
-  /// - Parameters:
-  ///   - id: The unique identifier for the process. Defaults to a new UUID.
-  ///   - initializedAt: The date when the process was initialized. Defaults to current date and time.
-  public init(id: String = UUID().uuidString, initializedAt: Date = .now) {
-    self.id = id
-    self.initializedAt = initializedAt
+  @Loadable<[Int]> var numbers
+  
+  var body: some View {
+    List {
+      Button("Load Numbers") {
+        loadNumbers()
+      }
+      .disabled(numbers.isLoading)
+      switch numbers {
+      case .absent:
+        EmptyView()
+      case .loading:
+        ProgressView()
+          .frame(height: .infinity)
+      case .error(let error):
+        Text("An error occurred: \(error.localizedDescription)")
+      case .loaded(let numbers):
+        ForEach(numbers, id: \.self) { number in
+          Text(String(number))
+        }
+      }
+    }
+    .animation(.default, value: numbers)
+  }
+  
+  @MainActor func loadNumbers() {
+    $numbers.load {
+      try await Task.sleep(for: .seconds(2))
+      return [0, 1, 2, 42, 73]
+    }
   }
 }
 
-extension SingleProcess: CustomDebugStringConvertible {
-  public var debugDescription: String {
-    "\(id)"
-  }
+
+
+#Preview {
+  DemoView()
 }

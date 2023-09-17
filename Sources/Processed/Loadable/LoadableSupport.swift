@@ -23,95 +23,95 @@
 import SwiftUI
 
 @MainActor
-public protocol LoadableSupport where Self: ObservableObject {
-
-    func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
-
-    func load<Value>(
-        _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
-        silently runSilently: Bool,
-        priority: TaskPriority?,
-        block: @escaping () async throws -> Value
-    )
-
-    func load<Value>(
-        _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
-        silently runSilently: Bool,
-        priority: TaskPriority?,
-        block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
-    )
+public protocol LoadableSupport: AnyObject {
+  
+  func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
+  
+  func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+    silently runSilently: Bool,
+    priority: TaskPriority?,
+    block: @escaping () async throws -> Value
+  )
+  
+  func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+    silently runSilently: Bool,
+    priority: TaskPriority?,
+    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+  )
 }
 
 extension LoadableSupport {
-
-    public func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
-        let identifier = ProcessIdentifier(
-            identifier: ObjectIdentifier(self),
-            keyPath: loadableState
-        )
-        tasks[identifier]?.cancel()
-        tasks.removeValue(forKey: identifier)
+  
+  public func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
+    let identifier = ProcessIdentifier(
+      identifier: ObjectIdentifier(self),
+      keyPath: loadableState
+    )
+    tasks[identifier]?.cancel()
+    tasks.removeValue(forKey: identifier)
+  }
+  
+  public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    block: @escaping () async throws -> Value
+  ) {
+    let identifier = ProcessIdentifier(
+      identifier: ObjectIdentifier(self),
+      keyPath: loadableState
+    )
+    tasks[identifier]?.cancel()
+    tasks[identifier] = Task(priority: priority) {
+      defer {
+        // Cleanup
+        tasks[identifier] = nil
+      }
+      
+      do {
+        if !runSilently { self[keyPath: loadableState] = .loading }
+        self[keyPath: loadableState] = try await .loaded(block())
+      } catch is CancellationError {
+        // Task was cancelled. Don't change the state anymore
+      } catch is LoadableReset {
+        self[keyPath: loadableState] = .absent
+      } catch {
+        self[keyPath: loadableState] = .error(error)
+      }
     }
-
-    public func load<Value>(
-        _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
-        silently runSilently: Bool = false,
-        priority: TaskPriority? = nil,
-        block: @escaping () async throws -> Value
-    ) {
-        let identifier = ProcessIdentifier(
-            identifier: ObjectIdentifier(self),
-            keyPath: loadableState
-        )
-        tasks[identifier]?.cancel()
-        tasks[identifier] = Task(priority: priority) {
-            defer {
-                // Cleanup
-                tasks[identifier] = nil
-            }
-
-            do {
-                if !runSilently { self[keyPath: loadableState] = .loading }
-                self[keyPath: loadableState] = try await .loaded(block())
-            } catch is CancellationError {
-                // Task was cancelled. Don't change the state anymore
-            } catch is LoadableReset {
-                self[keyPath: loadableState] = .absent
-            } catch {
-                self[keyPath: loadableState] = .error(error)
-            }
+  }
+  
+  public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+  ) {
+    let identifier = ProcessIdentifier(
+      identifier: ObjectIdentifier(self),
+      keyPath: loadableState
+    )
+    tasks[identifier]?.cancel()
+    tasks[identifier] = Task(priority: priority) {
+      defer {
+        // Cleanup
+        tasks[identifier] = nil
+      }
+      
+      do {
+        if !runSilently { self[keyPath: loadableState] = .loading }
+        try await block { state in
+          self[keyPath: loadableState] = state
         }
+      } catch is CancellationError {
+        // Task was cancelled. Don't change the state anymore
+      } catch is LoadableReset {
+        self[keyPath: loadableState] = .absent
+      } catch {
+        self[keyPath: loadableState] = .error(error)
+      }
     }
-
-    public func load<Value>(
-        _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
-        silently runSilently: Bool = false,
-        priority: TaskPriority? = nil,
-        block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
-    ) {
-        let identifier = ProcessIdentifier(
-            identifier: ObjectIdentifier(self),
-            keyPath: loadableState
-        )
-        tasks[identifier]?.cancel()
-        tasks[identifier] = Task(priority: priority) {
-            defer {
-                // Cleanup
-                tasks[identifier] = nil
-            }
-
-            do {
-                if !runSilently { self[keyPath: loadableState] = .loading }
-                try await block { state in
-                    self[keyPath: loadableState] = state
-                }
-            } catch is CancellationError {
-                // Task was cancelled. Don't change the state anymore
-            } catch is LoadableReset {
-                self[keyPath: loadableState] = .absent
-            } catch {
-                self[keyPath: loadableState] = .error(error)
-            }
-        }
-    }
+  }
 }

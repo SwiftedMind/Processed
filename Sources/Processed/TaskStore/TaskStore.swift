@@ -23,10 +23,10 @@
 import Foundation
 
 struct ProcessIdentifier: Hashable {
-    var identifier: ObjectIdentifier
-    var keyPath: AnyKeyPath
+  var identifier: ObjectIdentifier
+  var keyPath: AnyKeyPath
 }
 
 var tasks: [ProcessIdentifier: Task<Void, Never>] = [:] {
-    didSet { print("Global Tasks:", String(tasks.count)) }
+  didSet { print("Global Tasks:", String(tasks.count)) }
 }

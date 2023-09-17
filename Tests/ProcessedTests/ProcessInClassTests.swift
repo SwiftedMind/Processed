@@ -27,16 +27,16 @@ import SwiftUI
 private struct EquatableError: Error, Equatable {}
 
 final class ProcessInClassTests: XCTestCase {
-    @MainActor func testBasic() async throws {
-        let container = ProcessContainer<SingleProcess>()
-        let process = SingleProcess(id: "1")
-
-        await container.run(\.process, as: process) {
-            return
-        }
-
-        XCTAssertEqual(container.stateHistory, [.idle, .running(process), .finished(process)])
+  @MainActor func testBasic() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    
+    await container.run(\.process, as: process) {
+      return
     }
+    
+    XCTAssertEqual(container.stateHistory, [.idle, .running(process), .finished(process)])
+  }
 }
 
 

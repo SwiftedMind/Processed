@@ -23,26 +23,26 @@
 import SwiftUI
 
 final public class ProcessMockContainer<ProcessID> {
-    var process: ProcessState<ProcessID>
-    var task: Task<Void, Never>?
-
-    public init(initialState: ProcessState<ProcessID> = .idle) {
-        self.process = initialState
+  var process: ProcessState<ProcessID>
+  var task: Task<Void, Never>?
+  
+  public init(initialState: ProcessState<ProcessID> = .idle) {
+    self.process = initialState
+  }
+  
+  var taskBinding: Binding<Task<Void, Never>?> {
+    .init {
+      self.task
+    } set: { newValue in
+      self.task = newValue
     }
-
-    var taskBinding: Binding<Task<Void, Never>?> {
-        .init {
-            self.task
-        } set: { newValue in
-            self.task = newValue
-        }
+  }
+  
+  var processBinding: Binding<ProcessState<ProcessID>> {
+    .init {
+      self.process
+    } set: { newValue in
+      self.process = newValue
     }
-
-    var processBinding: Binding<ProcessState<ProcessID>> {
-        .init {
-            self.process
-        } set: { newValue in
-            self.process = newValue
-        }
-    }
+  }
 }
