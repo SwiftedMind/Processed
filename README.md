@@ -8,20 +8,25 @@
 ![GitHub tag (with filter)](https://img.shields.io/github/v/tag/SwiftedMind/Processed)
 ![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
 
-Processed is a lightweight wrapper around loading states in SwiftUI
+Processed is a lightweight wrapper around loading states in SwiftUI.
 
 ```swift
 struct DemoView: View {
   @Loadable<[Int]> var numbers
+  
   var body: some View {
     List {
       Button("Load Numbers") {
         loadNumbers()
-      }.disabled(numbers.isLoading)
+      }
+      .disabled(numbers.isLoading)
       switch numbers {
-      case .absent: EmptyView()
-      case .loading: ProgressView()
-      case .error(let error): Text("\(error.localizedDescription)")
+      case .absent: 
+        EmptyView()
+      case .loading: 
+        ProgressView()
+      case .error(let error): 
+        Text("\(error.localizedDescription)")
       case .loaded(let numbers):
         ForEach(numbers, id: \.self) { number in
           Text(String(number))
@@ -38,12 +43,12 @@ struct DemoView: View {
     }
   }
 }
-
 ```
 
 - [Installation](#installation)
 - [Documentation](#documentation)
-- [Get Started](#get-started)
+- [Background](#background)
+- **[Get Started](#get-started)**
 - [Example Apps](#example-apps)
 - [License](#license)
 
@@ -56,7 +61,7 @@ Prcoessed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 Add the following line to the dependencies in your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/SwiftedMind/Processed", from: "0.3.0")
+.package(url: "https://github.com/SwiftedMind/Processed", from: "0.4.0")
 ```
 
 ### Xcode project
@@ -67,7 +72,7 @@ Go to `File` > `Add Packages...` and enter the URL "https://github.com/SwiftedMi
 
 _Coming soon_
 
-## Get Started
+## Background
 
 Apps need to handle loading, error and success states in a lot of places, to perform generic processes like logging in, saving, or deleting something, or to fetch and prepare data for the user. Therefore, it is useful to define some kind of `enum` that drives the UI:
 
@@ -134,37 +139,55 @@ func reload() {
 }
 ```
 
-The interesting thing here is that almost everything inside the method is boilerplate. You always have to cancel any previous loading tasks, you always have to set the `.loading` state and you always have to end with either a `.loaded` state or an `.error` state. The only part that's unique to this specific situation is calling `fetchNumbers()`.
+The interesting thing here is that almost everything inside the method is boilerplate. You always have to cancel any previous loading tasks, create a new task, set the `.loading` state and you always have to end with either a `.loaded` state or an `.error` state. The only part that's unique to this specific situation is calling `fetchNumbers()`.
 
-And that's exactly what Processed helps with. It hides this boilerplate behind a set of easy to use types and property wrappers. Let's have a look at how it works.
+And that's exactly what Processed helps with. It hides that boilerplate behind a set of easy to use types and property wrappers. Let's have a look at how it works.
+
+## Get Started
 
 ### LoadableState
 
-### ProcessState
+Processed defines a `LoadableState` enum that can be used to represent the loading state of some data. It also comes with a lot of handy convenient properties and methods, like `.isLoading`, `.setLoading`, `.data` etc.
 
-Processed consists of two property wrappers: `@Process` and `@Loadable`, both of which you can use inside SwiftUI
+```swift
+enum LoadableState<Value> {
+  case absent
+  case loading
+  case error(Error)
+  case loaded(Value)
+}
+```
 
-### In SwiftUI Views
+Building on top of this type, Processed defines the `@Loadable` property wrapper.
 
-Inside the SwiftUI environment, you can use the `@Process` and `@Loadable` property wrappers for maximum convenience.
+```swift
+@propertyWrapper public struct Loadable<Value>: DynamicProperty where Value: Sendable {
+  public var wrappedValue: LoadableState<Value> { get nonmutating set }
+  public var projectedValue: Loadable<Value>.Binding { get }
+  public init(wrappedValue initialState: LoadableState<Value> = .absent)
+  public struct Binding { /* ... */ }
+}
+```
 
-
-### In an`ObservableObject`
-
-
+Its `wrappedValue` exposes the underlying `LoadableState`, whereas the `projectedValue` exposes a set of methods to manage the loading of the data. You can use this in any SwiftUI view. Let's look at the example from above, but rewritten using `@Loadable`:
 
 ```swift
 struct DemoView: View {
   @Loadable<[Int]> var numbers
+  
   var body: some View {
     List {
       Button("Load Numbers") {
         loadNumbers()
-      }.disabled(numbers.isLoading)
+      }
+      .disabled(numbers.isLoading)
       switch numbers {
-      case .absent: EmptyView()
-      case .loading: ProgressView()
-      case .error(let error): Text("\(error.localizedDescription)")
+      case .absent: 
+        EmptyView()
+      case .loading: 
+        ProgressView()
+      case .error(let error): 
+        Text("\(error.localizedDescription)")
       case .loaded(let numbers):
         ForEach(numbers, id: \.self) { number in
           Text(String(number))
@@ -176,15 +199,54 @@ struct DemoView: View {
   
   @MainActor func loadNumbers() {
     $numbers.load {
-      try await Task.sleep(for: .seconds(2))
-      return [0, 1, 2, 42, 73]
+      try await fetchNumbers()
     }
   }
 }
-
 ```
 
+The `$numbers.load` does a few things. It cancels any previous tasks, starts a new one and sets the state to `.loading`. It then runs the closure and uses its result to set the `.loaded` state or a thrown error to set the `.error` state. All this is hidden behind this convenient call to one single method.
+
+Additionally, `@Loadable` also has another overload of the `load` method, that let's you yield multiple results. This is useful if you have a stream of data that you want to send to the UI:
+
+```swift
+@MainActor func loadNumbers() {
+  $numbers.load { yield in
+    for try await numbers in streamNumbers() {
+      yield(.loaded(numbers)
+    }
+  }
+}
+```
+
+To cancel an ongoing task, simply call `$numbers.cancel()` or throw a `CancelLoadable()` error from inside the closure. To fully reset the state, there is also the `$numbers.reset()` method you can use.
+
+
+### ProcessState
+
+```swift
+// ProcessID is used to identify a process, so that you can share a process state across different tasks
+enum ProcessState<ProcessID> {
+  case idle
+  case running(ProcessID)
+  case failed(process: ProcessID, error: Swift.Error)
+  case finished(ProcessID)
+}
+```
+
+`LoadableState` is useful to represent the loading state of some data, while `ProcessState` does the same for generic processes without an actual, direct result.
+
+
+### In SwiftUI Views
+
+Inside the SwiftUI environment, you can use the `@Process` and `@Loadable` property wrappers for maximum convenience.
+
+### In Classes
+
+
 ## Example Apps
+
+You can find an example app in the `Examples` folder of this repository.
 
 ## License
 
