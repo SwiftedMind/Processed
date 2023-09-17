@@ -14,6 +14,13 @@ Processed is a lightweight wrapper around loading states in SwiftUI.
 struct DemoView: View {
   @Loadable<[Int]> var numbers
   
+  @MainActor func loadNumbers() {
+    $numbers.load {
+      try await Task.sleep(for: .seconds(2))
+      return [0, 1, 2, 42, 73]
+    }
+  }
+  
   var body: some View {
     List {
       Button("Load Numbers") {
@@ -35,13 +42,6 @@ struct DemoView: View {
     }
     .animation(.default, value: numbers)
   }
-  
-  @MainActor func loadNumbers() {
-    $numbers.load {
-      try await Task.sleep(for: .seconds(2))
-      return [0, 1, 2, 42, 73]
-    }
-  }
 }
 ```
 
@@ -49,6 +49,8 @@ struct DemoView: View {
 - [Documentation](#documentation)
 - [Background](#background)
 - **[Get Started](#get-started)**
+	- [LoadableState](#loadablestate)
+ 	- [ProcessState](#processstate)
 - [Example Apps](#example-apps)
 - [License](#license)
 
@@ -177,9 +179,7 @@ struct DemoView: View {
   
   var body: some View {
     List {
-      Button("Load Numbers") {
-        loadNumbers()
-      }
+      Button("Reload") { loadNumbers() }
       .disabled(numbers.isLoading)
       switch numbers {
       case .absent: 
@@ -220,6 +220,36 @@ Additionally, `@Loadable` also has another overload of the `load` method, that l
 ```
 
 To cancel an ongoing task, simply call `$numbers.cancel()` or throw a `CancelLoadable()` error from inside the closure. To fully reset the state, there is also the `$numbers.reset()` method you can use.
+
+<details>
+  <summary>Use LoadableState in Classes</summary>
+  
+ If you prefer to keep your state in a view model, or if you would like to use Processed completeley outside of SwiftUI, you can also do all the things from above inside a class. However, it works slightly different because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
+
+```swift
+@MainActor final class ViewModel: ObservableObject, ProcessSupport, LoadableSupport {
+  // Define the LoadableState enum as a normal @Published property
+  @Published var numbers: LoadableState<[Int]> = .absent
+
+  func loadNumbers() {
+    // Call the load method from the LoadableSupport protocol
+    load(\.numbers) {
+      try await self.fetchNumbers()
+    }
+  }
+  
+  func loadStreamedNumbers() {
+    load(\.numbers) { yield in
+      for try await numbers in self.sstreamNumbers() {
+        yield(.loaded(numbers)
+      }
+    }
+  }
+}
+```
+</details>
+
+#### Use in Classes
 
 
 ### ProcessState
