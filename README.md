@@ -229,7 +229,7 @@ If you prefer to keep your state in a view model, or if you would like to use Pr
 You simply have to conform your class to the `LoadableSupport` protocol that implements the same `load`, `cancel` and `reset`  methods as the `@Loadable` property wrapper, but this time defined on `self`:
 
 ```swift
-@MainActor final class ViewModel: ObservableObject, ProcessSupport, LoadableSupport {
+@MainActor final class ViewModel: ObservableObject, LoadableSupport {
   // Define the LoadableState enum as a normal @Published property
   @Published var numbers: LoadableState<[Int]> = .absent
 
@@ -309,7 +309,7 @@ struct DemoView: View {
 }
 ```
 
-Just as with `@Loadable`, you can cancel an ongoing task, by calling `$importantProcess.cancel()` or throw a `CancelProcess()` error from inside the closure. To fully reset the state, there is also a `$importantProcess.reset()` method you can use.
+Just as with `@Loadable`, you can cancel an ongoing task  by calling `$saving.cancel()` or throw a `CancelProcess()` error from inside the closure. To fully reset the state, there is also a `$saving.reset()` method you can use.
 
 
 #### Process Identification
@@ -363,6 +363,40 @@ struct DemoView: View {
 }
 ```
 
+<details>
+  <summary>Use ProcessState in Classes</summary>
+  
+Just as with `LoadableState`, you can also do all the things from above inside a class.
+
+You simply have to conform your class to the `ProcessSupport` protocol that implements the same `run`, `cancel` and `reset`  methods as the `@Process` property wrapper, but this time defined on `self`:
+
+```swift
+@MainActor final class ViewModel: ObservableObject, ProcessSupport {
+
+  enum  ProcessKind {
+    case save
+    case delete
+  }
+
+  // Define the Process enum as a normal @Published property
+  @Published var process: Process<ProcessKind> = .idle
+
+  func save() {
+    // Call the run method from the ProcessSupport protocol
+    run(\.process, as: .save) {
+      try await save()
+    }
+  }
+  
+  func delete() {
+    // Call the run method from the ProcessSupport protocol
+    run(\.process, as: .delete) {
+      try await delete()
+    }
+  }
+}
+```
+</details>
 
 ## Example Apps
 
