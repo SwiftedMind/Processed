@@ -1,10 +1,10 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.8
 
 import PackageDescription
 
 let package = Package(
   name: "Processed",
-  platforms: [.iOS(.v15), .watchOS(.v8), .macOS(.v10_13), .tvOS(.v15), .visionOS(.v1)],
+  platforms: [.iOS(.v15), .watchOS(.v8), .macOS(.v13), .tvOS(.v15)],
   products: [
     .library(
       name: "Processed",
