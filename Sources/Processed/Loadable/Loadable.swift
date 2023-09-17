@@ -56,10 +56,34 @@ import SwiftUI
 
 extension Loadable {
   /// A binding for controlling the process's state and execution.
-  public struct Binding {
+  @propertyWrapper public struct Binding {
     @SwiftUI.Binding var state: LoadableState<Value>
     @SwiftUI.Binding var task: Task<Void, Never>?
     
+    public var wrappedValue: LoadableState<Value> {
+      get { state }
+      nonmutating set {
+        cancel()
+        state = newValue
+      }
+    }
+
+    public var projectedValue: Binding {
+      self
+    }
+
+    public init(
+      state: SwiftUI.Binding<LoadableState<Value>>,
+      task: SwiftUI.Binding<Task<Void, Never>?>
+    ) {
+      self._state = state
+      self._task = task
+    }
+
+    public init(_ binding: Loadable<Value>.Binding) {
+      self = binding
+    }
+
     public func cancel() {
       task?.cancel()
       task = nil
@@ -99,7 +123,7 @@ extension Loadable {
         }
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
-      } catch is LoadableReset {
+      } catch is CancelLoadable {
         cancel()
       } catch {
         state = .error(error)
@@ -131,7 +155,7 @@ extension Loadable {
         state = try await .loaded(block())
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
-      } catch is LoadableReset {
+      } catch is CancelLoadable {
         cancel()
       } catch {
         state = .error(error)
@@ -140,8 +164,4 @@ extension Loadable {
   }
 }
 
-extension Loadable: Equatable where Value: Equatable {
-  public static func == (lhs: Loadable<Value>, rhs: Loadable<Value>) -> Bool {
-    lhs.state == rhs.state
-  }
-}
+public typealias LoadableBinding<Value> = Loadable<Value>.Binding

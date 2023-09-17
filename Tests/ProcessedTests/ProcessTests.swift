@@ -78,7 +78,7 @@ final class ProcessTests: XCTestCase {
     let process = SingleProcess(id: "1")
     
     await binding.run(process) {
-      throw ProcessReset()
+      throw CancelProcess()
     }
     
     XCTAssertEqual(container.stateHistory, [.idle, .running(process)])

@@ -24,10 +24,9 @@ import SwiftUI
 
 @MainActor
 public protocol ProcessSupport: AnyObject {
-  func cancelProcess<ProcessID>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>
-  )
-  
+  func cancel<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>)
+  func reset<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>)
+
   func run<ProcessID>(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     as processKind: ProcessID,
@@ -63,7 +62,7 @@ public protocol ProcessSupport: AnyObject {
 
 extension ProcessSupport {
   
-  @MainActor public func cancelProcess<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>) {
+  @MainActor public func cancel<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>) {
     let identifier = ProcessIdentifier(
       identifier: ObjectIdentifier(self),
       keyPath: processState
@@ -71,7 +70,14 @@ extension ProcessSupport {
     tasks[identifier]?.cancel()
     tasks.removeValue(forKey: identifier)
   }
-  
+
+  @MainActor public func reset<ProcessID>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>) {
+    if case .idle = self[keyPath: processState] {} else {
+      self[keyPath: processState] = .idle
+    }
+    cancel(processState)
+  }
+
   @MainActor public func run<ProcessID>(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     as processKind: ProcessID,
@@ -113,7 +119,7 @@ extension ProcessSupport {
       self[keyPath: processState] = .finished(process)
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore
-    } catch is ProcessReset {
+    } catch is CancelProcess {
       self[keyPath: processState] = .idle
     } catch {
       self[keyPath: processState] = .failed(process: process, error: error)
@@ -161,7 +167,7 @@ extension ProcessSupport {
       self[keyPath: processState] = .finished(process)
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore
-    } catch is ProcessReset {
+    } catch is CancelProcess {
       self[keyPath: processState] = .idle
     } catch {
       self[keyPath: processState] = .failed(process: process, error: error)

@@ -161,7 +161,16 @@ extension ProcessState {
     if case .failed(let failedProcess, _) = self { return failedProcess == process }
     return false
   }
-  
+
+  public var process: ProcessID? {
+    switch self {
+    case .idle: return nil
+    case .running(let process): return process
+    case .failed(let process,_ ): return process
+    case .finished(let process): return process
+    }
+  }
+
   public var error: Error? {
     if case .failed(_, let error) = self { return error }
     return nil

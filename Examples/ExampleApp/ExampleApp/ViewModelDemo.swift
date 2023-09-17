@@ -25,7 +25,7 @@ import Processed
 
 struct ViewModelDemo: View {
   @StateObject var viewModel = ViewModel()
-  
+
   var body: some View {
     List {
       switch viewModel.numbers {
@@ -61,7 +61,7 @@ struct ViewModelDemo: View {
     .animation(.default, value: viewModel.numbers)
     .navigationTitle("ViewModel Demo")
   }
-  
+
   @ViewBuilder @MainActor
   private var deleteButton: some View {
     LoadingButton("Delete All Numbers", role: .destructive) {
@@ -71,7 +71,7 @@ struct ViewModelDemo: View {
     .disabled(viewModel.process.isRunning)
     .disabled(viewModel.numbers.data?.isEmpty == true)
   }
-  
+
   @ViewBuilder @MainActor
   private var resetButton: some View {
     LoadingButton("Reset") {
@@ -84,15 +84,15 @@ struct ViewModelDemo: View {
 extension ViewModelDemo {
   @MainActor
   final class ViewModel: ObservableObject, ProcessSupport, LoadableSupport {
-    
+
     enum SingleProcess {
       case delete
       case reset
     }
-    
+
     @Published var numbers: LoadableState<[Int]> = .absent
     @Published var process: ProcessState<SingleProcess> = .idle
-    
+
     func load() {
       load(\.numbers) { yield in
         var numbers: [Int] = []
@@ -105,19 +105,19 @@ extension ViewModelDemo {
         yield(.loaded(numbers.shuffled()))
       }
     }
-    
+
     func delete() {
       run(\.process, as: .delete) {
         try await Task.sleep(for: .seconds(1))
-        self.cancelLoading(\.numbers)
+        self.cancel(\.numbers)
         self.numbers.setValue([])
       }
     }
-    
+
     func reset() {
       run(\.process, as: .reset) {
         try await Task.sleep(for: .seconds(1))
-        self.cancelLoading(\.numbers)
+        self.cancel(\.numbers)
         self.numbers.setAbsent()
         self.process.setIdle()
       }

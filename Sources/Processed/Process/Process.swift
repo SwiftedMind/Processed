@@ -23,8 +23,7 @@
 import SwiftUI
 
 /// A property wrapper to manage the state of an asynchronous process.
-@propertyWrapper
-public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
+@propertyWrapper public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
   
   @SwiftUI.State private var state: ProcessState<ProcessID>
   @SwiftUI.State private var task: Task<Void, Never>?
@@ -90,17 +89,6 @@ extension Process {
     
     public init(_ binding: Process<ProcessID>.Binding) {
       self = binding
-    }
-    
-    public static func mocked(
-      _ container: ProcessMockContainer<ProcessID>
-    ) -> Process<ProcessID>.Binding {
-      .init(state: container.processBinding, task: container.taskBinding)
-    }
-    
-    public static func mocked() -> Process<ProcessID>.Binding {
-      let container = ProcessMockContainer<ProcessID>()
-      return .init(state: container.processBinding, task: container.taskBinding)
     }
     
     public func cancel() {
@@ -220,7 +208,7 @@ extension Process {
         state = .finished(process)
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
-      } catch is ProcessReset {
+      } catch is CancelProcess {
         cancel()
       } catch {
         state = .failed(process: process, error: error)

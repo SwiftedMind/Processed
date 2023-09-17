@@ -107,7 +107,7 @@ private struct EquatableError: Error, Equatable {}
     let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
     
     await binding.load {
-      throw LoadableReset()
+      throw CancelLoadable()
     }
     
     XCTAssertEqual(container.stateHistory, [.absent, .loading])
@@ -118,7 +118,7 @@ private struct EquatableError: Error, Equatable {}
     let binding = Loadable.Binding(state: container.stateBinding, task: container.taskBinding)
     
     await binding.load {
-      throw LoadableReset()
+      throw CancelLoadable()
     }
     
     binding.cancel()

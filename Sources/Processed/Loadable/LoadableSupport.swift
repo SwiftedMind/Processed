@@ -25,8 +25,9 @@ import SwiftUI
 @MainActor
 public protocol LoadableSupport: AnyObject {
   
-  func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
-  
+  func cancel<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
+  func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
+
   func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
     silently runSilently: Bool,
@@ -44,7 +45,7 @@ public protocol LoadableSupport: AnyObject {
 
 extension LoadableSupport {
   
-  public func cancelLoading<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
+  public func cancel<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
     let identifier = ProcessIdentifier(
       identifier: ObjectIdentifier(self),
       keyPath: loadableState
@@ -52,7 +53,14 @@ extension LoadableSupport {
     tasks[identifier]?.cancel()
     tasks.removeValue(forKey: identifier)
   }
-  
+
+  public func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
+    if case .absent = self[keyPath: loadableState] {} else {
+      self[keyPath: loadableState] = .absent
+    }
+    cancel(loadableState)
+  }
+
   public func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
@@ -75,7 +83,7 @@ extension LoadableSupport {
         self[keyPath: loadableState] = try await .loaded(block())
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
-      } catch is LoadableReset {
+      } catch is CancelLoadable {
         self[keyPath: loadableState] = .absent
       } catch {
         self[keyPath: loadableState] = .error(error)
@@ -107,7 +115,7 @@ extension LoadableSupport {
         }
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
-      } catch is LoadableReset {
+      } catch is CancelLoadable {
         self[keyPath: loadableState] = .absent
       } catch {
         self[keyPath: loadableState] = .error(error)
