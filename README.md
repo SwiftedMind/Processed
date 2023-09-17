@@ -296,7 +296,7 @@ struct DemoView: View {
       case .failed(_, let error): 
         Text("\(error.localizedDescription)")
       case .finished:
-        Text("Finished Saving"")
+        Text("Finished Saving")
       }
     }
   }
