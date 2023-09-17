@@ -8,13 +8,7 @@
 ![GitHub tag (with filter)](https://img.shields.io/github/v/tag/SwiftedMind/Processed)
 ![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
 
-Processed is a lightweight wrapper around loading states in SwiftUI, providing 
-
-with the goal to reduce repeated writing of boilerplate code and task management
-
-It comes with two enums `LoadableState` and `ProcessState` 
-
-It works in views as well as classes.
+Processed is a lightweight wrapper around loading states in SwiftUI
 
 ```swift
 struct DemoView: View {
