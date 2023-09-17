@@ -22,9 +22,9 @@
 
 import SwiftUI
 
-/// A unique identifier for a process.
+/// An identifier for a unique process.
 public struct SingleProcess: Equatable, Sendable {
-  /// The unique identifier for the process.
+  /// The identifier for the process.
   var id: String
   /// The date when the process was initialized.
   var initializedAt: Date

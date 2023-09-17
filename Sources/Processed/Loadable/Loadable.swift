@@ -22,12 +22,55 @@
 
 import SwiftUI
 
+/// A property wrapper that adds automatic state and `Task` management around a ``Processed/LoadableState``.
+/// It takes care of creating a `Task` to load the resource, cancel any previous `Task` instances and setting
+/// the appropriate loading states that are exposed through its ``wrappedValue``.
+///
+/// You can use this property wrapper in any SwiftUI view.
+/// To start loading a resource, call one of the `load` methods of the `$`-prefixed synthesized property.
+///
+/// ```swift
+///struct DemoView: View {
+///  @Loadable<[Int]> var numbers
+///
+///  @MainActor func loadNumbers() {
+///    $numbers.load {
+///      try await fetchNumbers()
+///    }
+///  }
+///
+///  var body: some View {
+///    List {
+///      Button("Reload") { loadNumbers() }
+///        .disabled(numbers.isLoading)
+///      switch numbers {
+///      case .absent:
+///        EmptyView()
+///      case .loading:
+///        ProgressView()
+///      case .error(let error):
+///        Text("\(error.localizedDescription)")
+///      case .loaded(let numbers):
+///        ForEach(numbers, id: \.self) { number in
+///          Text(String(number))
+///        }
+///      }
+///    }
+///  }
+///}
+/// ```
+///
+/// - Note: This is only meant to be used from within SwiftUI views.
+/// If you need the same functionality from a class, please refer to ``Processed/LoadableSupport``.
 @propertyWrapper public struct Loadable<Value>: DynamicProperty where Value: Sendable {
   
   @State private var state: LoadableState<Value>
   @State private var task: Task<Void, Never>?
   
-  /// The current state of the process.
+  /// The current state of the loadable resource.
+  ///
+  /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-4w49u``.
+  /// However, doing so will cancel any ongoing task first, to prevent data races.
   public var wrappedValue: LoadableState<Value> {
     get { state }
     nonmutating set {
@@ -35,8 +78,23 @@ import SwiftUI
       state = newValue
     }
   }
-  
-  /// Provides a binding for controlling the process.
+
+  /// Provides an interface for automatic control over the loading process,
+  /// through a set of easy to use methods.
+  ///
+  /// Use the `$`-prefixed synthesized property to access these advanced controls.
+  ///
+  /// Example:
+  ///
+  /// ```swift
+  /// @Loadable<[Int]> var numbers
+  ///
+  /// /* ... */
+  ///
+  /// $numbers.load {
+  ///   try await fetchNumbers()
+  /// }
+  /// ```
   public var projectedValue: Binding {
     .init(state: $state, task: $task)
   }
@@ -46,8 +104,7 @@ import SwiftUI
   }
   
   // MARK: - Manual Process Modifiers
-  
-  /// Cancels any running task associated with this process.
+
   private func cancel() {
     task?.cancel()
     task = nil
@@ -55,11 +112,16 @@ import SwiftUI
 }
 
 extension Loadable {
-  /// A binding for controlling the process's state and execution.
+  /// An object providing an interface for automatic control over the loading process,
+  /// through a set of easy to use methods.
   @propertyWrapper public struct Binding {
     @SwiftUI.Binding var state: LoadableState<Value>
     @SwiftUI.Binding var task: Task<Void, Never>?
     
+    /// The current state of the loadable resource.
+    ///
+    /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-4w49u``.
+    /// However, doing so will cancel any ongoing task first, to prevent data races.
     public var wrappedValue: LoadableState<Value> {
       get { state }
       nonmutating set {
@@ -68,9 +130,28 @@ extension Loadable {
       }
     }
 
+    /// Provides an interface for automatic control over the loading process,
+    /// through a set of easy to use methods.
+    ///
+    /// Use the `$`-prefixed synthesized property to access these advanced controls.
+    ///
+    /// Example:
+    ///
+    /// ```swift
+    /// @Loadable<[Int]> var numbers
+    ///
+    /// /* ... */
+    ///
+    /// $numbers.load {
+    ///   try await fetchNumbers()
+    /// }
+    /// ```
     public var projectedValue: Binding {
       self
     }
+
+    /// An object providing an interface for automatic control over the loading process,
+    /// through a set of easy to use methods.
 
     public init(
       state: SwiftUI.Binding<LoadableState<Value>>,
@@ -80,44 +161,105 @@ extension Loadable {
       self._task = task
     }
 
+    /// An object providing an interface for automatic control over the loading process,
+    /// through a set of easy to use methods.
     public init(_ binding: Loadable<Value>.Binding) {
       self = binding
     }
 
+    /// Cancels the task of an ongoing resource loading process.
+    ///
+    /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
     public func cancel() {
       task?.cancel()
       task = nil
     }
     
+    /// Cancels the task of an ongoing resource loading process and resets the state to `.absent`.
+    ///
+    /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
     public func reset() {
       if case .absent = state {} else {
         state = .absent
       }
       cancel()
     }
-    
+
+    private func setLoadingStateIfNeeded(runSilently: Bool) {
+      if !runSilently {
+        if case .loading = state {} else {
+          state = .loading
+        }
+      }
+    }
+
     // MARK: - Run Loadable With Yielding
-    
+
+    /// Starts a resource loading process in a new `Task` that continuously yields results
+    /// until the `block` closure terminates or fails, while setting the ``Processed/LoadableState`` accordingly.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - priority: The priority level for the `Task` that is created and used for the loading process.
+    ///   - block: The asynchronous block to run.
+    ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
+    ///
+    /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
     @discardableResult public func load(
       silently runSilently: Bool = false,
       priority: TaskPriority? = nil,
       block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
     ) -> Task<Void, Never> {
       cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
       let task = Task(priority: priority) {
-        await load(silently: runSilently, priority: priority, block: block)
+        do {
+          if !runSilently {
+            if case .loading = state {} else {
+              state = .loading
+            }
+          }
+          try await block { yieldedState in
+            state = yieldedState
+          }
+        } catch is CancellationError {
+          // Task was cancelled. Don't change the state anymore
+        } catch is CancelLoadable {
+          cancel()
+        } catch {
+          state = .error(error)
+        }
       }
       self.task = task
       return task
     }
-    
+
+    /// Starts a resource loading process in the current asynchronous context, that continuously yields results
+    /// until the `block` closure terminates or fails, while setting the ``Processed/LoadableState`` accordingly.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - block: The asynchronous block to run.
+    ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
     public func load(
       silently runSilently: Bool = false,
-      priority: TaskPriority? = nil,
       block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
     ) async {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
       do {
-        if !runSilently { state = .loading }
         try await block { yieldedState in
           state = yieldedState
         }
@@ -132,26 +274,66 @@ extension Loadable {
     
     // MARK: - Run Loadable With Result
     
+    /// Starts a resource loading process in a new `Task`, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/LoadableState`` accordingly.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set, 
+    /// while a returned value will cause a final `.loaded` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - priority: The priority level for the `Task` that is created and used for the loading process.
+    ///   - block: The asynchronous block to run.
+    ///
+    /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
     @discardableResult public func load(
       silently runSilently: Bool = false,
       priority: TaskPriority? = nil,
       block: @escaping () async throws -> Value
     ) -> Task<Void, Never> {
       cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
       let task = Task(priority: priority) {
-        await load(silently: runSilently, priority: priority, block: block)
+        do {
+          setLoadingStateIfNeeded(runSilently: runSilently)
+          state = try await .loaded(block())
+        } catch is CancellationError {
+          // Task was cancelled. Don't change the state anymore
+        } catch is CancelLoadable {
+          cancel()
+        } catch {
+          state = .error(error)
+        }
       }
       self.task = task
       return task
     }
     
+    /// Starts a resource loading process in the current asynchronous context, 
+    /// waiting for a return value or thrown error from the `block` closure,
+    /// while setting the ``Processed/LoadableState`` accordingly.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set,
+    /// while a returned value will cause a final `.loaded` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - block: The asynchronous block to run.
     public func load(
       silently runSilently: Bool = false,
-      priority: TaskPriority? = nil,
       block: @escaping () async throws -> Value
     ) async {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
       do {
-        if !runSilently { state = .loading }
         state = try await .loaded(block())
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore

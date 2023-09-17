@@ -82,8 +82,7 @@ struct ViewModelDemo: View {
 }
 
 extension ViewModelDemo {
-  @MainActor
-  final class ViewModel: ObservableObject, ProcessSupport, LoadableSupport {
+  @MainActor final class ViewModel: ObservableObject, ProcessSupport, LoadableSupport {
 
     enum SingleProcess {
       case delete

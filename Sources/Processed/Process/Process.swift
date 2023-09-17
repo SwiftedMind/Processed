@@ -24,7 +24,7 @@ import SwiftUI
 
 /// A property wrapper to manage the state of an asynchronous process.
 @propertyWrapper public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
-  
+
   @SwiftUI.State private var state: ProcessState<ProcessID>
   @SwiftUI.State private var task: Task<Void, Never>?
   
@@ -91,18 +91,32 @@ extension Process {
       self = binding
     }
     
+    /// Cancels the task of an ongoing process.
+    ///
+    /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
     public func cancel() {
       task?.cancel()
       task = nil
     }
-    
+
+    /// Cancels the task of an ongoing process and resets the state to `.idle`.
+    ///
+    /// - Note: You are responsible for cooperating with the task cancellation within the process closures.
     public func reset() {
       if case .idle = state {} else {
         state = .idle
       }
       cancel()
     }
-    
+
+    private func setLoadingStateIfNeeded(runSilently: Bool, process: ProcessID) {
+      if !runSilently {
+        if case .running(let runningProcess) = state, runningProcess == process {} else {
+          state = .running(process)
+        }
+      }
+    }
+
     // MARK: - Run
     
     /// Runs a process with the provided asynchronous closure.
@@ -119,6 +133,7 @@ extension Process {
       block: @escaping () async throws -> Void
     ) -> Task<Void, Never> {
       cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
       let task = Task(priority: priority) {
         await runTaskBody(process: process, runSilently: runSilently, block: block)
       }
@@ -131,6 +146,8 @@ extension Process {
       silently runSilently: Bool = false,
       block: @escaping () async throws -> Void
     ) async {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
       await runTaskBody(process: process, runSilently: runSilently, block: block)
     }
     
@@ -145,52 +162,7 @@ extension Process {
       silently runSilently: Bool = false,
       block: @escaping () async throws -> Void
     ) async where ProcessID == SingleProcess {
-      await runTaskBody(process: .init(), runSilently: runSilently, block: block)
-    }
-    
-    // MARK: - Run Detached
-    
-    /// Runs a process with the provided asynchronous closure in a detached task.
-    /// - Parameters:
-    ///   - process: The process to run.
-    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`.
-    ///   - priority: The priority of the task.
-    ///   - block: The asynchronous block of code to execute.
-    /// - Returns: The task representing the process execution.
-    @discardableResult public func runDetached(
-      _ process: ProcessID,
-      silently runSilently: Bool = false,
-      priority: TaskPriority? = nil,
-      block: @escaping () async throws -> Void
-    ) -> Task<Void, Never> {
-      cancel()
-      let task = Task.detached(priority: priority) {
-        await runTaskBody(process: process, runSilently: runSilently, block: block)
-      }
-      self.task = task
-      return task
-    }
-    
-    public func runDetached(
-      _ process: ProcessID,
-      silently runSilently: Bool = false,
-      block: @escaping () async throws -> Void
-    ) async {
-      await runDetached(process, silently: runSilently, block: block).value
-    }
-    
-    public func runDetached(
-      silently runSilently: Bool = false,
-      block: @escaping () async throws -> Void
-    ) where ProcessID == SingleProcess {
-      runDetached(.init(), silently: runSilently, block: block)
-    }
-    
-    public func runDetached(
-      silently runSilently: Bool = false,
-      block: @escaping () async throws -> Void
-    ) async where ProcessID == SingleProcess {
-      await runDetached(.init(), silently: runSilently, block: block).value
+      await run(.init(), silently: runSilently, block: block)
     }
     
     // MARK: - Internal
@@ -201,9 +173,6 @@ extension Process {
       block: @escaping () async throws -> Void
     ) async {
       do {
-        if !runSilently {
-          state = .running(process)
-        }
         try await block()
         state = .finished(process)
       } catch is CancellationError {

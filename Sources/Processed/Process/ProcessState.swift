@@ -100,20 +100,24 @@ extension ProcessState {
   
   // MARK: - Manual Control
   
-  /// Sets the process state to `idle`.
+  /// Sets the state to `idle`.
   public mutating func setIdle() {
     self = .idle
   }
   
+  /// Sets the state to `running` with the given process.
+  /// - Parameters:
+  ///   - process: The process that is running.
   public mutating func setRunning(_ process: ProcessID) {
     self = .running(process)
   }
   
+  /// Sets the state to `running`.
   public mutating func setRunning() where ProcessID == SingleProcess {
     self = .running(.init())
   }
   
-  /// Sets the process state to `.failed` with the specified process and error.
+  /// Sets the process state to `.failed` with the given process id.
   /// - Parameters:
   ///   - process: The process that failed.
   ///   - error: The error causing the failure.
@@ -121,47 +125,76 @@ extension ProcessState {
     self = .failed(process: process, error: error)
   }
   
+  /// Sets the process state to `.failed`.
+  /// - Parameters:
+  ///   - error: The error causing the failure.
   public mutating func setFailed(with error: Swift.Error) where ProcessID == SingleProcess {
     self = .failed(process: .init(), error: error)
   }
   
-  /// Sets the process state to `.finished` with the specified process.
-  /// - Parameter process: The process that finished.
+  /// Sets the process state to `.finished` with the given process.
+  /// - Parameters:
+  ///   - process: The process that finished.
   public mutating func setFinished(_ process: ProcessID) {
     self = .finished(process)
   }
   
+  /// Sets the process state to `.finished`.
   public mutating func setFinished() where ProcessID == SingleProcess {
     self = .finished(.init())
   }
   
   // MARK: - Convenience
   
+  /// A Boolean value indicating whether the state is `idle`.
   public var isIdle: Bool {
     if case .idle = self { return true }
     return false
   }
-  
+
+  /// A Boolean value indicating whether the state is `running`.
   public var isRunning: Bool {
     if case .running = self { return true }
     return false
   }
   
+  /// A Boolean value indicating whether the state is `running` with the given process.
+  /// - Parameter process: The process to check against.
+  /// - Returns: A boolean.
   public func isRunning(_ process: ProcessID) -> Bool where ProcessID: Equatable {
     if case .running(let runningProcess) = self { return runningProcess == process }
     return false
   }
   
+  /// A Boolean value indicating whether the state is `failed`.
   public var hasFailed: Bool {
     if case .failed = self { return true }
     return false
   }
   
+  /// A Boolean value indicating whether the state is `failed` with the given process.
+  /// - Parameter process: The process to check against.
+  /// - Returns: A boolean.
   public func hasFailed(_ process: ProcessID) -> Bool where ProcessID: Equatable {
     if case .failed(let failedProcess, _) = self { return failedProcess == process }
     return false
   }
 
+  /// A Boolean value indicating whether the state is `finished`.
+  public var hasFinished: Bool {
+    if case .finished = self { return true }
+    return false
+  }
+
+  /// A Boolean value indicating whether the state is `finished` with the given process.
+  /// - Parameter process: The process to check against.
+  /// - Returns: A boolean.
+  public func hasFinished(_ process: ProcessID) -> Bool where ProcessID: Equatable {
+    if case .finished(let finishedProcess) = self { return finishedProcess == process }
+    return false
+  }
+
+  /// The current process if the state is `running`, `failed` or `finished`, and `nil` otherwise.
   public var process: ProcessID? {
     switch self {
     case .idle: return nil
@@ -171,19 +204,10 @@ extension ProcessState {
     }
   }
 
+  /// The current error if the state is `failed`, and `nil` otherwise.
   public var error: Error? {
     if case .failed(_, let error) = self { return error }
     return nil
-  }
-  
-  public var hasFinished: Bool {
-    if case .finished = self { return true }
-    return false
-  }
-  
-  public func hasFinished(_ process: ProcessID) -> Bool where ProcessID: Equatable {
-    if case .finished(let finishedProcess) = self { return finishedProcess == process }
-    return false
   }
 }
 
