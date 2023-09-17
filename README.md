@@ -115,22 +115,22 @@ struct DemoView: View {
 
   var body: some View {
     List {
-      Button("Reload") { reload() }
+      Button("Reload") { loadNumbers() }
       switch numbers {
         /* Loading, Error and Success UI */
       }
   }
   
-  func reload() {
+  func loadNumbers() {
     /* Reload data */
   }
 }
 ```
 
-The reload method could look something like this:
+The `loadNumbers` method could look something like this:
 
 ```swift
-func reload() {
+func loadNumbers() {
   loadingTask?.cancel()
   loadingTask = Task {
     numbers = .loading
