@@ -22,20 +22,24 @@
 
 import Foundation
 
-/// Represents the possible states of a process.
+/// An enumeration representing the possible states of a process.
 public enum ProcessState<ProcessID> {
+
+  /// Represents the state where the process is currently not running and has no result or error.
   case idle
+
+  /// Represents the state where the process is currently running.
+  /// - Parameter ProcessID: The process that is running.
   case running(ProcessID)
+
+  /// Represents the state where the process has finished with an error.
+  /// - Parameter process: The process that has thrown an error.
+  /// - Parameter error: The thrown error.
   case failed(process: ProcessID, error: Swift.Error)
+
+  /// Represents the state where the process has finished successfully.
+  /// - Parameter process: The process that has finished.
   case finished(ProcessID)
-  
-  public init(initialState: ProcessState) {
-    self = initialState
-  }
-  
-  public init(initialState: ProcessState) where ProcessID == SingleProcess {
-    self = initialState
-  }
 }
 
 extension ProcessState: CustomDebugStringConvertible {

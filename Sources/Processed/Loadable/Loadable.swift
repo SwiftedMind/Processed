@@ -346,4 +346,6 @@ extension Loadable {
   }
 }
 
+/// An object providing an interface for automatic control over the loading process,
+/// through a set of easy to use methods.
 public typealias LoadableBinding<Value> = Loadable<Value>.Binding
