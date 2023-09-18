@@ -124,7 +124,7 @@ extension LoadableState {
   }
 }
 
-
+extension LoadableState: Sendable where Value: Sendable {}
 extension LoadableState: Equatable where Value: Equatable {
   nonisolated public static func == (
     lhs: LoadableState,

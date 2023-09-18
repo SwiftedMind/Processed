@@ -66,7 +66,7 @@ Prcoessed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 Add the following line to the dependencies in your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/SwiftedMind/Processed", from: "0.4.0")
+.package(url: "https://github.com/SwiftedMind/Processed", from: "0.5.0")
 ```
 
 ### Xcode project
@@ -75,7 +75,7 @@ Go to `File` > `Add Packages...` and enter the URL "https://github.com/SwiftedMi
 
 ## Documentation
 
-_Coming soon_
+You can find the documentation here: [https://swiftpackageindex.com/SwiftedMind/Processed/documentation/processed](https://swiftpackageindex.com/SwiftedMind/Processed/documentation/processed)
 
 ## Background
 
@@ -115,22 +115,22 @@ struct DemoView: View {
 
   var body: some View {
     List {
-      Button("Reload") { reload() }
+      Button("Reload") { loadNumbers() }
       switch numbers {
         /* Loading, Error and Success UI */
       }
   }
   
-  func reload() {
+  func loadNumbers() {
     /* Reload data */
   }
 }
 ```
 
-The reload method could look something like this:
+The `loadNumbers` method could look something like this:
 
 ```swift
-func reload() {
+func loadNumbers() {
   loadingTask?.cancel()
   loadingTask = Task {
     numbers = .loading

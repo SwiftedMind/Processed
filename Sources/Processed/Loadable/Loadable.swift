@@ -71,7 +71,7 @@ import SwiftUI
   ///
   /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-4w49u``.
   /// However, doing so will cancel any ongoing task first, to prevent data races.
-  public var wrappedValue: LoadableState<Value> {
+  @MainActor public var wrappedValue: LoadableState<Value> {
     get { state }
     nonmutating set {
       cancel()
@@ -95,14 +95,14 @@ import SwiftUI
   ///   try await fetchNumbers()
   /// }
   /// ```
-  public var projectedValue: Binding {
+  @MainActor public var projectedValue: Binding {
     .init(state: $state, task: $task)
   }
   
   public init(wrappedValue initialState: LoadableState<Value> = .absent) {
     self._state = .init(initialValue: initialState)
   }
-  
+
   // MARK: - Manual Process Modifiers
 
   private func cancel() {
@@ -210,10 +210,10 @@ extension Loadable {
     ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
     ///
     /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
-    @discardableResult public func load(
+    @MainActor @discardableResult public func load(
       silently runSilently: Bool = false,
       priority: TaskPriority? = nil,
-      block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+      block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
     ) -> Task<Void, Never> {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
@@ -253,9 +253,9 @@ extension Loadable {
     ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
     ///   - block: The asynchronous block to run.
     ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
-    public func load(
+    @MainActor public func load(
       silently runSilently: Bool = false,
-      block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+      block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
     ) async {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
@@ -289,10 +289,10 @@ extension Loadable {
     ///   - block: The asynchronous block to run.
     ///
     /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
-    @discardableResult public func load(
+    @MainActor @discardableResult public func load(
       silently runSilently: Bool = false,
       priority: TaskPriority? = nil,
-      block: @escaping () async throws -> Value
+      block: @MainActor @escaping () async throws -> Value
     ) -> Task<Void, Never> {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
@@ -311,8 +311,8 @@ extension Loadable {
       self.task = task
       return task
     }
-    
-    /// Starts a resource loading process in the current asynchronous context, 
+
+    /// Starts a resource loading process in the current asynchronous context,
     /// waiting for a return value or thrown error from the `block` closure,
     /// while setting the ``Processed/LoadableState`` accordingly.
     ///
@@ -327,9 +327,9 @@ extension Loadable {
     /// - Parameters:
     ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
     ///   - block: The asynchronous block to run.
-    public func load(
+    @MainActor public func load(
       silently runSilently: Bool = false,
-      block: @escaping () async throws -> Value
+      block: @MainActor @escaping () async throws -> Value
     ) async {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
