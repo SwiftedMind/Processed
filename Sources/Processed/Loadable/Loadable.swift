@@ -102,7 +102,7 @@ import SwiftUI
   public init(wrappedValue initialState: LoadableState<Value> = .absent) {
     self._state = .init(initialValue: initialState)
   }
-  
+
   // MARK: - Manual Process Modifiers
 
   private func cancel() {
