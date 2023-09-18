@@ -66,7 +66,7 @@ Prcoessed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 Add the following line to the dependencies in your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/SwiftedMind/Processed", from: "0.4.0")
+.package(url: "https://github.com/SwiftedMind/Processed", from: "0.5.0")
 ```
 
 ### Xcode project
