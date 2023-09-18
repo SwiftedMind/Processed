@@ -86,9 +86,7 @@ import SwiftUI
   ///
   /// ```swift
   /// @Process var saving
-  ///
   /// /* ... */
-  ///
   /// $saving.run {
   ///   try await save()
   /// }
@@ -103,12 +101,14 @@ import SwiftUI
   /// }
   ///
   /// @Process<ProcessKind> var action
-  ///
   /// /* ... */
-  ///
-  /// $saving.run(.saving) {
+  /// $action.run(.saving) {
   ///   try await save()
   /// }
+  /// $action.run(.deleting) {
+  ///   try await delete()
+  /// }
+  /// ```
   @MainActor public var projectedValue: Binding {
     .init(state: $state, task: $task)
   }
@@ -159,9 +159,7 @@ extension Process {
     ///
     /// ```swift
     /// @Process var saving
-    ///
     /// /* ... */
-    ///
     /// $saving.run {
     ///   try await save()
     /// }
@@ -176,12 +174,14 @@ extension Process {
     /// }
     ///
     /// @Process<ProcessKind> var action
-    ///
     /// /* ... */
-    ///
-    /// $saving.run(.saving) {
+    /// $action.run(.saving) {
     ///   try await save()
     /// }
+    /// $action.run(.deleting) {
+    ///   try await delete()
+    /// }
+    /// ```
     public var projectedValue: Binding {
       self
     }

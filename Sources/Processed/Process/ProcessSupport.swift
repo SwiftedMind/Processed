@@ -22,6 +22,53 @@
 
 import SwiftUI
 
+/// A protocol that adds support for automatic state and `Task` management for ``Processed/ProcessState`` to the class.
+///
+/// The provided method takes care of creating a `Task` to run the process in, cancel any previous `Task` instances and setting
+/// the appropriate loading states on the ``Processed/ProcessState`` that you specify.
+///
+/// To start a process, call one of the `run` methods on self with a key path to a ``Processed/ProcessState``
+/// property.
+///
+/// ```swift
+/// @MainActor final class ViewModel: ObservableObject, ProcessSupport {
+///   @Published var numbers: ProcessState = .idle
+///
+///   func save() {
+///     run {
+///       return try await save()
+///     }
+///   }
+/// }
+/// ```
+///
+/// You can run different processes on the same state by providing a process identifier:
+///
+///  ```swift
+/// @MainActor final class ViewModel: ObservableObject, ProcessSupport {
+///   enum ProcessKind: Equatable {
+///     case saving
+///     case deleting
+///   }
+///
+///   @Published var action: ProcessState<ProcessKind> = .idle
+///
+///   func save() {
+///     run(\.action, as: .saving) {
+///       return try await save()
+///     }
+///   }
+///
+///   func delete() {
+///     run(\.action, as: .delete) {
+///       return try await delete()
+///     }
+///   }
+/// }
+/// ```
+///
+/// - Note: This is only meant to be used in classes.
+/// If you want to do this inside a SwiftUI view, please refer to the ``Processed/Process`` property wrapper.
 public protocol ProcessSupport: AnyObject {
 
   /// Cancels the task of an ongoing process.
