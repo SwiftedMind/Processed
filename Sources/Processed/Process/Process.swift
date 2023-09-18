@@ -29,7 +29,7 @@ import SwiftUI
   @SwiftUI.State private var task: Task<Void, Never>?
   
   /// The current state of the process.
-  public var wrappedValue: ProcessState<ProcessID> {
+  @MainActor public var wrappedValue: ProcessState<ProcessID> {
     get { state }
     nonmutating set {
       cancel()
@@ -38,7 +38,7 @@ import SwiftUI
   }
   
   /// Provides a binding for controlling the process.
-  public var projectedValue: Binding {
+  @MainActor public var projectedValue: Binding {
     .init(state: $state, task: $task)
   }
   
@@ -66,7 +66,7 @@ extension Process {
     @SwiftUI.Binding var state: ProcessState<ProcessID>
     @SwiftUI.Binding var task: Task<Void, Never>?
     
-    public var wrappedValue: ProcessState<ProcessID> {
+    @MainActor public var wrappedValue: ProcessState<ProcessID> {
       get { state }
       nonmutating set {
         cancel()
@@ -75,7 +75,7 @@ extension Process {
     }
     
     /// Provides a binding for controlling the process.
-    public var projectedValue: Binding {
+    @MainActor public var projectedValue: Binding {
       self
     }
     
@@ -126,11 +126,11 @@ extension Process {
     ///   - priority: The priority of the task.
     ///   - block: The asynchronous block of code to execute.
     /// - Returns: The task representing the process execution.
-    @discardableResult public func run(
+    @MainActor @discardableResult public func run(
       _ process: ProcessID,
       silently runSilently: Bool = false,
       priority: TaskPriority? = nil,
-      block: @escaping () async throws -> Void
+      block: @MainActor @escaping () async throws -> Void
     ) -> Task<Void, Never> {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently, process: process)
@@ -141,36 +141,36 @@ extension Process {
       return task
     }
     
-    public func run(
+    @MainActor public func run(
       _ process: ProcessID,
       silently runSilently: Bool = false,
-      block: @escaping () async throws -> Void
+      block: @MainActor @escaping () async throws -> Void
     ) async {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently, process: process)
       await runTaskBody(process: process, runSilently: runSilently, block: block)
     }
     
-    public func run(
+    @MainActor public func run(
       silently runSilently: Bool = false,
-      block: @escaping () async throws -> Void
+      block: @MainActor @escaping () async throws -> Void
     ) where ProcessID == SingleProcess {
       run(.init(), silently: runSilently, block: block)
     }
     
-    public func run(
+    @MainActor public func run(
       silently runSilently: Bool = false,
-      block: @escaping () async throws -> Void
+      block: @MainActor @escaping () async throws -> Void
     ) async where ProcessID == SingleProcess {
       await run(.init(), silently: runSilently, block: block)
     }
     
     // MARK: - Internal
     
-    private func runTaskBody(
+    @MainActor private func runTaskBody(
       process: ProcessID,
       runSilently: Bool,
-      block: @escaping () async throws -> Void
+      block: @MainActor @escaping () async throws -> Void
     ) async {
       do {
         try await block()
