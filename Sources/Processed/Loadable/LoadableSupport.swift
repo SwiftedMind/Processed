@@ -44,17 +44,17 @@ import SwiftUI
 ///
 /// - Note: This is only meant to be used in classes.
 /// If you want to do this inside a SwiftUI view, please refer to the ``Processed/Loadable`` property wrapper.
-@MainActor public protocol LoadableSupport: AnyObject {
+public protocol LoadableSupport: AnyObject {
 
   /// Cancels the task of an ongoing resource loading process.
   ///
   /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
-  func cancel<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
-  
+  @MainActor func cancel<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
+
   /// Cancels the task of an ongoing resource loading process and resets the state to `.absent`.
   ///
   /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
-  func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
+  @MainActor func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>)
 
   /// Starts a resource loading process in a new `Task`, waiting for a return value or thrown error from the
   /// `block` closure, while setting the ``Processed/LoadableState`` accordingly.
@@ -72,8 +72,8 @@ import SwiftUI
   ///   - block: The asynchronous block to run.
   ///
   /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
-  @discardableResult func load<Value>(
-    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+  @MainActor @discardableResult func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
     block: @escaping () async throws -> Value
@@ -95,8 +95,8 @@ import SwiftUI
   ///   - loadableState: The key path to the ``Processed/LoadableState``.
   ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
   ///   - block: The asynchronous block to run.
-  func load<Value>(
-    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+  @MainActor func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     block: @escaping () async throws -> Value
   ) async
@@ -117,8 +117,8 @@ import SwiftUI
   ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
   ///
   /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
-  @discardableResult func load<Value>(
-    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+  @MainActor @discardableResult func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
     block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
@@ -139,8 +139,8 @@ import SwiftUI
   ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
   ///   - block: The asynchronous block to run.
   ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
-  func load<Value>(
-    _ loadableState: ReferenceWritableKeyPath<Self,LoadableState<Value>>,
+  @MainActor func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) async
@@ -148,63 +148,77 @@ import SwiftUI
 
 extension LoadableSupport {
 
-  public func cancel<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
-    let identifier = ProcessIdentifier(
-      identifier: ObjectIdentifier(self),
-      keyPath: loadableState
-    )
-    tasks[identifier]?.cancel()
-    tasks.removeValue(forKey: identifier)
+  @MainActor public func cancel<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
+    let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
+    TaskStore.shared.tasks[identifier]?.cancel()
+    TaskStore.shared.tasks.removeValue(forKey: identifier)
   }
 
-  public func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
+  @MainActor public func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
     if case .absent = self[keyPath: loadableState] {} else {
       self[keyPath: loadableState] = .absent
     }
     cancel(loadableState)
   }
 
-  @discardableResult public func load<Value>(
+  @MainActor @discardableResult public func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
     block: @escaping () async throws -> Value
   ) -> Task<Void, Never> {
-    let identifier = ProcessIdentifier(
-      identifier: ObjectIdentifier(self),
-      keyPath: loadableState
-    )
-    tasks[identifier]?.cancel()
-    if !runSilently {
-      if case .loading = self[keyPath: loadableState] {} else {
-        self[keyPath: loadableState] = .loading
-      }
-    }
-    tasks[identifier] = Task(priority: priority) {
-      defer { // Cleanup
-        tasks[identifier] = nil
-      }
-      await load(
-        loadableState,
-        silently: runSilently,
-        block: block
-      )
+    let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
+    TaskStore.shared.tasks[identifier]?.cancel()
+    setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
+    TaskStore.shared.tasks[identifier] = Task(priority: priority) {
+      defer { TaskStore.shared.tasks[identifier] = nil }
+      await runReturningTaskBody(loadableState, silently: runSilently, block: block)
     }
 
-    return tasks[identifier]!
+    return TaskStore.shared.tasks[identifier]!
   }
 
-  public func load<Value>(
+  @MainActor public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    block: @escaping () async throws -> Value
+  ) async {
+    setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
+    await runReturningTaskBody(loadableState, silently: runSilently, block: block)
+  }
+
+  @MainActor @discardableResult public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+  ) -> Task<Void, Never> {
+    let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
+    TaskStore.shared.tasks[identifier]?.cancel()
+    setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
+    TaskStore.shared.tasks[identifier] = Task(priority: priority) {
+      defer { TaskStore.shared.tasks[identifier] = nil }
+      await runYieldingTaskBody(loadableState, silently: runSilently, block: block)
+    }
+
+    return TaskStore.shared.tasks[identifier]!
+  }
+
+  @MainActor public func load<Value>(
+    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    silently runSilently: Bool = false,
+    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+  ) async {
+    setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
+    await runYieldingTaskBody(loadableState, silently: runSilently, block: block)
+  }
+
+  @MainActor private func runReturningTaskBody<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     block: @escaping () async throws -> Value
   ) async {
     do {
-      if !runSilently {
-        if case .loading = self[keyPath: loadableState] {} else {
-          self[keyPath: loadableState] = .loading
-        }
-      }
       self[keyPath: loadableState] = try await .loaded(block())
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore
@@ -215,56 +229,30 @@ extension LoadableSupport {
     }
   }
 
-  @discardableResult public func load<Value>(
-    _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
-    silently runSilently: Bool = false,
-    priority: TaskPriority? = nil,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
-  ) -> Task<Void, Never> {
-    let identifier = ProcessIdentifier(
-      identifier: ObjectIdentifier(self),
-      keyPath: loadableState
-    )
-    tasks[identifier]?.cancel()
-    if !runSilently {
-      if case .loading = self[keyPath: loadableState] {} else {
-        self[keyPath: loadableState] = .loading
-      }
-    }
-    tasks[identifier] = Task(priority: priority) {
-      defer { // Cleanup
-        tasks[identifier] = nil
-      }
-      await load(
-        loadableState,
-        silently: runSilently,
-        block: block
-      )
-    }
-
-    return tasks[identifier]!
-  }
-
-  public func load<Value>(
+  @MainActor private func runYieldingTaskBody<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) async {
     do {
-      if !runSilently {
-        if case .loading = self[keyPath: loadableState] {} else {
-          self[keyPath: loadableState] = .loading
-        }
-      }
-      try await block { state in
-        self[keyPath: loadableState] = state
-      }
+      try await block { self[keyPath: loadableState] = $0 }
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore
     } catch is CancelLoadable {
       self[keyPath: loadableState] = .absent
     } catch {
       self[keyPath: loadableState] = .error(error)
+    }
+  }
+
+  @MainActor private func setLoadingStateIfNeeded<Value>(
+    on loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
+    runSilently: Bool
+  ) {
+    if !runSilently {
+      if case .loading = self[keyPath: loadableState] {} else {
+        self[keyPath: loadableState] = .loading
+      }
     }
   }
 }

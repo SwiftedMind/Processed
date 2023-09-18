@@ -24,6 +24,7 @@
 import SwiftUI
 
 @MainActor final class ProcessContainer<ProcessID>: ProcessSupport {
+  
   private(set) var processHistory: [ProcessState<ProcessID>]
   var task: Task<Void, Never>?
   var process: ProcessState<ProcessID> {

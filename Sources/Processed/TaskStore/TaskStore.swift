@@ -22,9 +22,33 @@
 
 import Foundation
 
+@MainActor class TaskStore {
+  static let shared: TaskStore = .init()
+
+  var tasks: [ProcessIdentifier: Task<Void, Never>] = [:]
+
+  func identifier<Object: ProcessSupport, ProcessID: Equatable>(
+    for processState: ReferenceWritableKeyPath<Object, ProcessState<ProcessID>>,
+    in type: Object
+  ) -> ProcessIdentifier {
+    ProcessIdentifier(
+      identifier: ObjectIdentifier(self),
+      keyPath: processState
+    )
+  }
+
+  func identifier<Object: LoadableSupport, Value>(
+    for loadableState: ReferenceWritableKeyPath<Object, LoadableState<Value>>,
+    in type: Object
+  ) -> ProcessIdentifier {
+    ProcessIdentifier(
+      identifier: ObjectIdentifier(self),
+      keyPath: loadableState
+    )
+  }
+}
+
 struct ProcessIdentifier: Hashable {
   var identifier: ObjectIdentifier
   var keyPath: AnyKeyPath
 }
-
-var tasks: [ProcessIdentifier: Task<Void, Never>] = [:]
