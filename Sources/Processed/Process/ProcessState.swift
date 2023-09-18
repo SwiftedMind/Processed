@@ -211,6 +211,7 @@ extension ProcessState {
   }
 }
 
+extension ProcessState: Sendable where ProcessID: Sendable {}
 extension ProcessState: Equatable where ProcessID: Equatable {
   nonisolated public static func == (lhs: ProcessState, rhs: ProcessState) -> Bool {
     switch (lhs, rhs) {
