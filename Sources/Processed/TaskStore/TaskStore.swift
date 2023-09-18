@@ -27,6 +27,4 @@ struct ProcessIdentifier: Hashable {
   var keyPath: AnyKeyPath
 }
 
-var tasks: [ProcessIdentifier: Task<Void, Never>] = [:] {
-  didSet { print("Global Tasks:", String(tasks.count)) }
-}
+var tasks: [ProcessIdentifier: Task<Void, Never>] = [:]
