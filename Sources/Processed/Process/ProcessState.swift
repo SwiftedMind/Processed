@@ -59,13 +59,6 @@ extension ProcessState: CustomDebugStringConvertible {
 
 extension ProcessState {
   
-  // MARK: - Reset
-  
-  /// Resets the state to `.idle`.
-  public mutating func reset() {
-    self = .idle
-  }
-  
   // MARK: - Start
   
   /// Starts running the specified process.

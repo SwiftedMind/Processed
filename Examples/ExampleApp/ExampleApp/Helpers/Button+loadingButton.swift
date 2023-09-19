@@ -22,19 +22,36 @@
 
 import SwiftUI
 
-private struct IsLoadingKey: EnvironmentKey {
-  static let defaultValue = false
-}
+private struct LoadingButtonModifier: ViewModifier {
+  @Environment(\.isLoading) private var isLoading
 
-extension EnvironmentValues {
-  var isLoading: Bool {
-    get { self[IsLoadingKey.self] }
-    set { self[IsLoadingKey.self] = newValue }
+  func body(content: Content) -> some View {
+    HStack {
+      content
+        .disabled(isLoading)
+      Spacer()
+      if isLoading {
+        ProgressView()
+      }
+    }
   }
 }
 
-extension View {
-  func isLoading(_ isLoading: Bool = true) -> some View {
-    environment(\.isLoading, isLoading)
+extension Button {
+  func withLoadingIndicator() -> some View {
+    modifier(LoadingButtonModifier())
+  }
+}
+
+#Preview {
+  List {
+    Button(action: { print("Pressed") }) {
+      Label("Press Me", systemImage: "star")
+    }
+    Button(action: { print("Pressed") }) {
+      Label("Press Me", systemImage: "star")
+    }
+    .withLoadingIndicator()
+    .loading()
   }
 }

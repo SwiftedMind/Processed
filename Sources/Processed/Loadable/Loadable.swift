@@ -69,7 +69,7 @@ import SwiftUI
   
   /// The current state of the loadable resource.
   ///
-  /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-4w49u``.
+  /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-2o0dp``.
   /// However, doing so will cancel any ongoing task first, to prevent data races.
   @MainActor public var wrappedValue: LoadableState<Value> {
     get { state }
@@ -120,7 +120,7 @@ extension Loadable {
     
     /// The current state of the loadable resource.
     ///
-    /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-4w49u``.
+    /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Loadable/Binding/load(silently:priority:block:)-2o0dp``.
     /// However, doing so will cancel any ongoing task first, to prevent data races.
     public var wrappedValue: LoadableState<Value> {
       get { state }

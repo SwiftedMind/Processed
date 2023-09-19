@@ -67,7 +67,7 @@ import SwiftUI
   
   /// The current state of the process.
   ///
-  /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-3ko9i``.
+  /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-5h20w``.
   /// However, doing so will cancel any ongoing task first, to prevent data races.
   @MainActor public var wrappedValue: ProcessState<ProcessID> {
     get { state }
@@ -115,15 +115,15 @@ import SwiftUI
   
   /// Initializes the process with an initial state.
   /// - Parameter initialState: The initial state of the process. Defaults to `.idle`.
-  public init(initialState: ProcessState<ProcessID> = .idle) {
+  public init(wrappedValue initialState: ProcessState<ProcessID> = .idle) {
     self._state = .init(initialValue: initialState)
   }
-  
+
   /// Default initializer for `Process<SingleProcess>`.
-  public init() where ProcessID == SingleProcess {
+  public init(wrappedValue initialState: ProcessState<ProcessID> = .idle) where ProcessID == SingleProcess {
     self._state = .init(initialValue: .idle)
   }
-  
+
   /// Cancels any running task associated with this process.
   private func cancel() {
     task?.cancel()
@@ -140,7 +140,7 @@ extension Process {
     
     /// The current state of the process.
     ///
-    /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-3ko9i``.
+    /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-5h20w``.
     /// However, doing so will cancel any ongoing task first, to prevent data races.
     public var wrappedValue: ProcessState<ProcessID> {
       get { state }
