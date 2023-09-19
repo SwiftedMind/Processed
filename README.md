@@ -135,8 +135,8 @@ func loadNumbers() {
   loadingTask = Task {
     numbers = .loading
     do {
-      let fetchedNumbers = try await fetchNumbers() // Imagine this method to fetch the data from somewhere
-      numbers = .loaded(fetchedNumbers)
+      try await Task.sleep(for: .seconds(2))
+      numbers = .loaded([0, 1, 2, 42, 73])
     } catch {
       numbers = .error(error)
     }
@@ -201,7 +201,8 @@ struct DemoView: View {
   
   @MainActor func loadNumbers() {
     $numbers.load {
-      try await fetchNumbers()
+	  try await Task.sleep(for: .seconds(2))
+      return [0, 1, 2, 42, 73]
     }
   }
 }
@@ -214,8 +215,11 @@ Additionally, `@Loadable` also has another overload of the `load` method, that l
 ```swift
 @MainActor func loadNumbers() {
   $numbers.load { yield in
-    for try await numbers in streamNumbers() {
-      yield(.loaded(numbers)
+    var numbers: [Int] = []
+    for await number in [0, 1, 2, 42, 73].publisher.values {
+      try await Task.sleep(for: .seconds(1))
+      numbers.append(number)
+      yield(.loaded(numbers))
     }
   }
 }
@@ -238,14 +242,18 @@ You simply have to conform your class to the `LoadableSupport` protocol that imp
   func loadNumbers() {
     // Call the load method from the LoadableSupport protocol
     load(\.numbers) {
-      try await self.fetchNumbers()
+	  try await Task.sleep(for: .seconds(2))
+      return [0, 1, 2, 42, 73]
     }
   }
   
   func loadStreamedNumbers() {
     load(\.numbers) { yield in
-      for try await numbers in self.sstreamNumbers() {
-        yield(.loaded(numbers)
+      var numbers: [Int] = []
+      for await number in [0, 1, 2, 42, 73].publisher.values {
+        try await Task.sleep(for: .seconds(1))
+        numbers.append(number)
+        yield(.loaded(numbers))
       }
     }
   }
