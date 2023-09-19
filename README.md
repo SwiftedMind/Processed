@@ -5,7 +5,7 @@
 
 # Processed
 
-![GitHub tag (with filter)](https://img.shields.io/github/v/tag/SwiftedMind/Processed)
+![GitHub release (with filter)](https://img.shields.io/github/v/release/SwiftedMind/Processed)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSwiftedMind%2FProcessed%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/SwiftedMind/Processed)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSwiftedMind%2FProcessed%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/SwiftedMind/Processed)
 ![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
