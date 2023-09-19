@@ -201,7 +201,7 @@ struct DemoView: View {
   
   @MainActor func loadNumbers() {
     $numbers.load {
-	  try await Task.sleep(for: .seconds(2))
+      try await Task.sleep(for: .seconds(2))
       return [0, 1, 2, 42, 73]
     }
   }
@@ -242,7 +242,7 @@ You simply have to conform your class to the `LoadableSupport` protocol that imp
   func loadNumbers() {
     // Call the load method from the LoadableSupport protocol
     load(\.numbers) {
-	  try await Task.sleep(for: .seconds(2))
+      try await Task.sleep(for: .seconds(2))
       return [0, 1, 2, 42, 73]
     }
   }
