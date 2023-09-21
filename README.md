@@ -1,4 +1,5 @@
 
+
 <p align="center">
   <img width="200" height="200" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
 </p>
@@ -163,60 +164,61 @@ enum LoadableState<Value> {
 }
 ```
 
-Building on top of this type, Processed defines the `@Loadable` property wrapper.
-
-```swift
-@propertyWrapper public struct Loadable<Value>: DynamicProperty where Value: Sendable {
-  public var wrappedValue: LoadableState<Value> { get nonmutating set }
-  public var projectedValue: Loadable<Value>.Binding { get }
-  public init(wrappedValue initialState: LoadableState<Value> = .absent)
-  @propertyWrapper public struct Binding { /* ... */ }
-}
-```
-
-Its `wrappedValue` exposes the underlying `LoadableState`, whereas the `projectedValue` exposes a set of methods to manage the loading of the data. You can use this in any SwiftUI view. Let's look at the example from above, but rewritten using `@Loadable`:
+Building on top of this type, Processed defines the `@Loadable` property wrapper, which you can use in a SwiftUI view to automate the loading state and task handling.
 
 ```swift
 struct DemoView: View {
-  @Loadable<[Int]> var numbers
-  
-  var body: some View {
-    List {
-      Button("Reload") { loadNumbers() }
-      .disabled(numbers.isLoading)
-      switch numbers {
-      case .absent: 
-        EmptyView()
-      case .loading: 
-        ProgressView()
-      case .error(let error): 
-        Text("\(error.localizedDescription)")
-      case .loaded(let numbers):
-        ForEach(numbers, id: \.self) { number in
-          Text(String(number))
-        }
-      }
-    }
-  }
-  
-  @MainActor func loadNumbers() {
-    $numbers.load {
-      try await Task.sleep(for: .seconds(2))
-      return [0, 1, 2, 42, 73]
+  @Loadable<[Int]> var numbers // Default state .absent
+  // ...
+}
+```
+
+Here, `numbers` is of type `LoadableState<[Int]>`, meaning you can switch over it and interact with it as you would with any other `enum`. The view will also update whenever the state changes. This gives you full manual control over all states and behaviors, if you need it.
+
+```swift
+/* DemoView */
+var body: some View {
+  List {
+    switch numbers {
+    case .absent: /* ... */
+    case .loading: /* ... */
+    case .error(let error): /* ... */
+    case .loaded(let numbers): /* ... */
     }
   }
 }
 ```
 
-The `$numbers.load` does a few things. It cancels any previous tasks, starts a new one and sets the state to `.loading`. It then runs the closure and uses its result to set the `.loaded` state or a thrown error to set the `.error` state. All this is hidden behind this convenient call to one single method.
-
-Additionally, `@Loadable` also has another overload of the `load` method, that let's you yield multiple results. This is useful if you have a stream of data that you want to send to the UI:
+However, the real benefit comes with the `$`-prefix property `$numbers`. It exposes a few methods that take care of the repetitive boilerplate code we discussed above:
 
 ```swift
+/* DemoView */
+@MainActor func loadNumbers() {
+  $numbers.load {
+    try await Task.sleep(for: .seconds(2))
+    return [42]
+  }
+}
+```
+
+Here, the call to `$numbers.load { ... }` does a few things: 
+1. It cancels any previous loading `Tasks`
+2. It starts and stores a new `Task`
+3. It sets the state to `.loading` (unless the `runSilently` argument is set to `true`)
+4.  It calls the closure and waits for either a return value or an error.
+	- If a value is returned, it will set the state to `.loaded(theValue)`
+	- If an error is thrown, it will set the state to `.error(theError)`
+
+Everything is hidden behind this one simple call, so that you can just focus on actually loading the data.
+
+You can also `yield` multiple values over time:
+
+```swift
+/* DemoView */
 @MainActor func loadNumbers() {
   $numbers.load { yield in
     var numbers: [Int] = []
-    for await number in [0, 1, 2, 42, 73].publisher.values {
+    for await number in [42, 73].publisher.values {
       try await Task.sleep(for: .seconds(1))
       numbers.append(number)
       yield(.loaded(numbers))
@@ -225,14 +227,36 @@ Additionally, `@Loadable` also has another overload of the `load` method, that l
 }
 ```
 
-To cancel an ongoing task, simply call `$numbers.cancel()` or throw a `CancelLoadable()` error from inside the closure. To fully reset the state, there is also a `$numbers.reset()` method you can use.
+Additionally, you can call `load` from an `async` context. When this happens, the loading process will not create its own `Task` internally, but rather simply use the calling `Task`, giving you full control over it:
 
-<details>
-  <summary>Use LoadableState in Classes</summary>
-  
-If you prefer to keep your state in a view model, or if you would like to use Processed completely outside of SwiftUI, you can also do all the things from above inside a class. However, it works slightly differently because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
+```swift
+/* DemoView */
+@MainActor func loadNumbers() {
+  self.numbersTask = Task {
+    await $numbers.load { // await the loading process
+      try await Task.sleep(for: .seconds(2))
+      return [42]
+    }
+    // At this point, the loading process has finished
+  }
+}
+```
 
-You simply have to conform your class to the `LoadableSupport` protocol that implements the same `load`, `cancel` and `reset`  methods as the `@Loadable` property wrapper, but this time defined on `self`:
+And lastly, `@Loadable` also supports cancellation from the outside and inside (in addition to respecting a parent `Task` cancellation):
+
+```swift
+$numbers.cancel() // Cancel internal Task
+$numbers.reset() // Cancel internal Task and reset state to .absent
+
+// Throw this in the `load` closure, to cancel a loading process from the inside:
+throw CancelLoadable()
+```
+
+#### Use `LoadableState` in Classes
+
+If you prefer to keep your state in a view model, or if you would like to use Processed completely outside of SwiftUI, you can also do all the things from above inside a class. However, the syntax is slightly different because of the nature of SwiftUI property wrappers (they hold `@State` properties inside, which don't work outside the SwiftUI environment).
+
+However, it's still really easy: You have to conform your class to the `LoadableSupport` protocol that implements the same `load`, `cancel` and `reset`  methods as the `@Loadable` property wrapper, but this time defined on the class itself:
 
 ```swift
 @MainActor final class ViewModel: ObservableObject, LoadableSupport {
@@ -243,23 +267,27 @@ You simply have to conform your class to the `LoadableSupport` protocol that imp
     // Call the load method from the LoadableSupport protocol
     load(\.numbers) {
       try await Task.sleep(for: .seconds(2))
-      return [0, 1, 2, 42, 73]
+      return [42]
     }
   }
   
   func loadStreamedNumbers() {
+    // Call the load method that yields results from the LoadableSupport protocol
     load(\.numbers) { yield in
       var numbers: [Int] = []
-      for await number in [0, 1, 2, 42, 73].publisher.values {
+      for await number in [42, 73].publisher.values {
         try await Task.sleep(for: .seconds(1))
         numbers.append(number)
         yield(.loaded(numbers))
       }
     }
   }
+
+  func cancelLoading() {
+    cancel(\.numbers)
+  }
 }
 ```
-</details>
 
 ### ProcessState
 
@@ -274,120 +302,124 @@ enum ProcessState<ProcessID> {
 }
 ```
 
-Building on top of this type, Processed defines the `@Process` property wrapper:
-
-```swift
-@propertyWrapper public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
-  public var wrappedValue: ProcessState<ProcessID> { get nonmutating set }
-  public var projectedValue: Binding { get }
-  public init(initialState: ProcessState<ProcessID> = .idle)
-  public init() where ProcessID == SingleProcess
-  @propertyWrapper public struct Binding { /* ... */ }
-}
-```
-
-It works similarly to `@Loadable`, but with slightly better fitting semantics around type and method names. 
-
-Let's look at an example:
+Building on top of this type, Processed defines the `@Process` property wrapper, which you can use in a SwiftUI view to automate the process state and task handling.
 
 ```swift
 struct DemoView: View {
-  @Process var saving
-  
-  var body: some View {
-    List {
-      Button("Save") { save() }
-      .disabled(numbers.isRunning)
-      switch saving {
-      case .idle: 
-        Text("Idle")
-      case .running: 
-        Text("Saving")
-      case .failed(_, let error): 
-        Text("\(error.localizedDescription)")
-      case .finished:
-        Text("Finished Saving")
-      }
-    }
-  }
-  
-  @MainActor func save() {
-    $saving.run {
-      try await save()
+  @Process var saveData // Compiler infers Process<SingleProcess> for single-purpose process states
+  // ...
+}
+```
+
+Here, `saveData` is of type `ProcessState<SingleProcess>`, meaning you can switch over it and interact with it as you would with any other `enum`. The view will also update whenever the state changes. This gives you full manual control over all states and behaviors, if you need it.
+
+```swift
+/* DemoView */
+var body: some View {
+  List {
+    switch saveData {
+    case .idle: /* ... */
+    case .running: /* ... */
+    case .failed(_, let error): /* ... */
+    case .finished: /* ... */
     }
   }
 }
 ```
 
-Just as with `@Loadable`, you can cancel an ongoing task  by calling `$saving.cancel()` or throw a `CancelProcess()` error from inside the closure. To fully reset the state, there is also a `$saving.reset()` method you can use.
-
-
-#### Process Identification
-
-`ProcessState` is generic over `ProcessID`, which is some value that identifies a specific process. This is useful if you have multiple processes that don't run in parallel and should be managed by a single state.
-
-In the above example, the generic `ProcessID` is automatically inferred to be `SingleProcess`, which is a helper type to make it easier to work with processes that only have a single identification. Specifying your own `ProcessID` is really easy, too! Let's modify the example slightly by adding a deletion option:
+However, just like with `@Loadable`, the real benefit comes with the `$`-prefix property `$saveData`. It also exposes a few methods that take care of the repetitive boilerplate code we discussed above:
 
 ```swift
+/* DemoView */
+@MainActor func save() {
+  $saveData.run {
+    try await saveToDisk()
+  }
+}
+```
+
+Here, the call to  `$saveData.run { ... }`  does a few things, pretty much identical to what `@Loadable` does, just with semantics better fitting a generic process without a return value:
+
+1.  It cancels any previous loading  `Tasks`
+2.  It starts and stores a new  `Task`
+3.  It sets the state to  `.running`  (unless the  `runSilently`  argument is set to  `true`)
+4.  It calls the closure and waits for either a return or an error.
+    -   If the closure returns, it will set the state to  `.finished`
+    -   If an error is thrown, it will set the state to  `.failed(theError)`
+
+Everything is hidden behind this one simple call, so that you can just focus on actually loading the data.
+
+You can also manage multiple kinds of processes through the same state. This is useful if you have multiple processes that don't run in parallel. In the example above, the generic parameter of the `ProcessState` enum is automatically inferred to be `SingleProcess`, which is a helper type to make it easier to work with processes that only have a single purpose. Specifying your own `ProcessID` is really easy, too! Let's modify the example slightly by adding a deletion option:
+
+```swift
+enum ProcessKind {
+  case save
+  case delete
+}
+
 struct DemoView: View {
+  @Process<ProcessKind> var process // Specify multiple purposes of this process state
 
-  enum  ProcessKind {
-    case save
-    case delete
-  }
-
-  @Process var process
-  
-  var body: some View {
-    List {
-      Button("Save") { save() }
-      .loading(process.isRunning(.save)) // Helper modifier to show a loading indicator on the button
-      .disabled(process.isRunning) // Disable if either process is running
-      Button("Delete") { delete() }
-      .loading(process.isRunning(.delete)) // Helper modifier to show a loading indicator on the button
-      .disabled(process.isRunning) // Disable if either process is running
-      switch process {
-      case .idle: 
-        Text("Idle")
-      case .running(let process): 
-        Text("Running \(process)")
-      case .failed(let process, let error): 
-        Text("\(process): \(error.localizedDescription)")
-      case .finished(let process):
-        Text("Finished \(process)")
-      }
-    }
-  }
-  
   @MainActor func save() {
-    $process.run(.save) {
-      try await save()
+    $process.run(.save) { // Run a save process
+      try await saveToDisk()
     }
   }
   
   @MainActor func delete() {
-    $process.run(.delete) {
-      try await delete()
+    $process.run(.delete) {  // Run a delete process
+      try await deleteFromDisk()
+    }
+  }
+
+  var body: some View {
+    List {
+      switch saveData {
+      case .idle: /* ... */
+      case .running(let process): /* ... */ // Identify the process
+      case .failed(let process, let error): /* ... */ // Identify the process
+      case .finished(let process): /* ... */ // Identify the process
+      }
     }
   }
 }
 ```
 
-<details>
-  <summary>Use ProcessState in Classes</summary>
-  
-Just as with `LoadableState`, you can also do all the things from above inside a class.
-
-You simply have to conform your class to the `ProcessSupport` protocol that implements the same `run`, `cancel` and `reset`  methods as the `@Process` property wrapper, but this time defined on `self`:
+Additionally, you can call `run` from an `async` context. When this happens, `@Process` will not create its own `Task` internally, but rather simply use the calling `Task`, giving you full control over it:
 
 ```swift
-@MainActor final class ViewModel: ObservableObject, ProcessSupport {
-
-  enum  ProcessKind {
-    case save
-    case delete
+/* DemoView */
+@MainActor func save() {
+  self.processTask = Task {
+    await $process.run(.save) { // await the process
+      try await saveToDisk()
+    }
+    // At this point, the process has finished
   }
+}
+```
 
+And lastly, `@Process` also supports cancellation from the outside and inside (in addition to respecting a parent `Task` cancellation):
+
+```swift
+$process.cancel() // Cancel internal Task
+$process.reset() // Cancel internal Task and reset state to .absent
+
+// Throw this in the `run` closure, to cancel a process from the inside:
+throw CancelProcess()
+```
+
+#### Use `ProcessState` in Classes
+
+Just as with `LoadableState`, you can also do all the things from above inside a class. You simply have to conform your class to the `ProcessSupport` protocol that implements the same `run`, `cancel` and `reset`  methods as the `@Process` property wrapper, but this time defined on `self`:
+
+```swift
+enum  ProcessKind {
+  case save
+  case delete
+}
+
+@MainActor final class ViewModel: ObservableObject, ProcessSupport {
   // Define the Process enum as a normal @Published property
   @Published var process: Process<ProcessKind> = .idle
 
@@ -404,9 +436,12 @@ You simply have to conform your class to the `ProcessSupport` protocol that impl
       try await delete()
     }
   }
+ 
+  func cancelLoading() {
+    cancel(\.process)
+  }
 }
 ```
-</details>
 
 ## Example Apps
 
