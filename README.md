@@ -297,7 +297,7 @@ struct DemoView: View {
   var body: some View {
     List {
       Button("Save") { save() }
-      .disabled(numbers.isLoading)
+      .disabled(numbers.isRunning)
       switch saving {
       case .idle: 
         Text("Idle")
