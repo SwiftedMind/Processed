@@ -55,7 +55,7 @@ struct Root: View {
             Text("Restartable Loadable")
           }
         } header: {
-          Text("SwiftUI Views")
+          Text("SwiftUI View Demos")
         } footer: {
           Text("See how you can use the `@Loadable` and `@Process` property wrappers directly in your views.")
         }
