@@ -24,21 +24,23 @@ import SwiftUI
 import Processed
 
 struct Root: View {
-  
+
   enum Destination: Hashable {
     case singleProcess
     case sharedProcess
     case loadable
+    case restartable
     case singleProcessInClass
     case sharedProcessInClass
     case loadableInClass
   }
-  
+
   @State var path: [Destination] = []
-  
+
   var body: some View {
     NavigationStack(path: $path) {
       List {
+        header
         Section {
           NavigationLink(value: Destination.singleProcess) {
             Text("Single process")
@@ -49,8 +51,13 @@ struct Root: View {
           NavigationLink(value: Destination.loadable) {
             Text("Loadable")
           }
+          NavigationLink(value: Destination.loadable) {
+            Text("Restartable Loadable")
+          }
+        } header: {
+          Text("SwiftUI Views")
         } footer: {
-          Text("See how you can use the @Loadable and @Process property wrappers directly in your views.")
+          Text("See how you can use the `@Loadable` and `@Process` property wrappers directly in your views.")
         }
         Section {
           NavigationLink(value: Destination.singleProcessInClass) {
@@ -62,11 +69,14 @@ struct Root: View {
           NavigationLink(value: Destination.loadableInClass) {
             Text("Loadable in class")
           }
+        } header: {
+          Text("Class Demos")
         } footer: {
-          Text("See how you can use LoadableSupport and ProcessSupport in an ObservableObject or any other class.")
+          Text("See how you can use `LoadableSupport` and `ProcessSupport` in an `ObservableObject` or any other class.")
         }
       }
       .navigationTitle("Demos")
+      .navigationBarTitleDisplayMode(.inline)
       .navigationDestination(for: Destination.self) { destination in
         switch destination {
         case .singleProcess:
@@ -75,6 +85,8 @@ struct Root: View {
           SharedProcessDemo()
         case .loadable:
           LoadableDemo()
+        case .restartable:
+          RestartableDemo()
         case .singleProcessInClass:
           SingleProcessInClassDemo()
         case .sharedProcessInClass:
@@ -83,6 +95,27 @@ struct Root: View {
           LoadableInClassDemo()
         }
       }
+    }
+  }
+
+  @ViewBuilder @MainActor
+  private var header: some View {
+    Section {
+      VStack {
+        Image(.logo)
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(height: 80)
+        Text("Processed")
+          .font(.system(size: 40, weight: .semibold))
+          .frame(maxWidth: .infinity)
+        Text("Demo")
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+          .foregroundStyle(.secondary)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical)
     }
   }
 }

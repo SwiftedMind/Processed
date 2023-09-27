@@ -78,6 +78,13 @@ extension LoadableState {
     self = .error(error)
   }
 
+  /// Sets the state to a mock`error` object.
+  ///
+  /// You can use this for testing or previewing purposes.
+  public mutating func setMockError() {
+    self = .error(NSError(domain: "mockerror", code: 0))
+  }
+
   /// Sets the state to `loaded` with the given value payload.
   ///
   /// - Parameter value: The successfully loaded resource.

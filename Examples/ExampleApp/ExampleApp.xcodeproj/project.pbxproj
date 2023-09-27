@@ -20,6 +20,7 @@
 		95A9CB8A2ABA0017001BFF02 /* SingleProcessInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A9CB892ABA0017001BFF02 /* SingleProcessInClassDemo.swift */; };
 		95A9CB8C2ABA0027001BFF02 /* MultiProcessInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A9CB8B2ABA0027001BFF02 /* MultiProcessInClassDemo.swift */; };
 		95A9CB902ABA145A001BFF02 /* LoadableInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A9CB8F2ABA145A001BFF02 /* LoadableInClassDemo.swift */; };
+		C40E3B5F2AC3F09800A2707D /* RestartableDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40E3B5E2AC3F09800A2707D /* RestartableDemo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		95A9CB892ABA0017001BFF02 /* SingleProcessInClassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleProcessInClassDemo.swift; sourceTree = "<group>"; };
 		95A9CB8B2ABA0027001BFF02 /* MultiProcessInClassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiProcessInClassDemo.swift; sourceTree = "<group>"; };
 		95A9CB8F2ABA145A001BFF02 /* LoadableInClassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadableInClassDemo.swift; sourceTree = "<group>"; };
+		C40E3B5E2AC3F09800A2707D /* RestartableDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestartableDemo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +115,7 @@
 				95A9CB832AB9FFEF001BFF02 /* SingleProcessDemo.swift */,
 				95A9CB852AB9FFF8001BFF02 /* SharedProcessDemo.swift */,
 				9506D55B2AB5876400472C0D /* LoadableDemo.swift */,
+				C40E3B5E2AC3F09800A2707D /* RestartableDemo.swift */,
 			);
 			path = "Demo - In SwiftUI View";
 			sourceTree = "<group>";
@@ -200,6 +203,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C40E3B5F2AC3F09800A2707D /* RestartableDemo.swift in Sources */,
 				9506D56E2AB5880B00472C0D /* Button+loadingButton.swift in Sources */,
 				9506D55C2AB5876400472C0D /* LoadableDemo.swift in Sources */,
 				9506D55A2AB5876400472C0D /* App.swift in Sources */,

@@ -29,7 +29,6 @@ struct DemoView: View {
       Button("Load Numbers") {
         loadNumbers()
       }
-      .disabled(numbers.isLoading)
       switch numbers {
       case .absent: 
         EmptyView()
@@ -60,7 +59,7 @@ struct DemoView: View {
 
 ## Installation
 
-Prcoessed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
+Processed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 
 ### Swift Package
 
@@ -76,7 +75,7 @@ Go to `File` > `Add Packages...` and enter the URL "https://github.com/SwiftedMi
 
 ## Documentation
 
-You can find the documentation here: [https://swiftpackageindex.com/SwiftedMind/Processed/documentation/processed](https://swiftpackageindex.com/SwiftedMind/Processed/documentation/processed)
+You can find the documentation [here](https://swiftpackageindex.com/SwiftedMind/Processed/documentation/processed).
 
 ## Background
 
