@@ -51,7 +51,7 @@ struct Root: View {
           NavigationLink(value: Destination.loadable) {
             Text("Loadable")
           }
-          NavigationLink(value: Destination.loadable) {
+          NavigationLink(value: Destination.restartable) {
             Text("Restartable Loadable")
           }
         } header: {
