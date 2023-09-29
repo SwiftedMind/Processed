@@ -30,6 +30,7 @@ struct Root: View {
     case sharedProcess
     case loadable
     case restartable
+    case refreshable
     case singleProcessInClass
     case sharedProcessInClass
     case loadableInClass
@@ -53,6 +54,9 @@ struct Root: View {
           }
           NavigationLink(value: Destination.restartable) {
             Text("Restartable Loadable")
+          }
+          NavigationLink(value: Destination.restartable) {
+            Text("Refreshable Loadable")
           }
         } header: {
           Text("SwiftUI View Demos")
@@ -87,6 +91,8 @@ struct Root: View {
           LoadableDemo()
         case .restartable:
           RestartableDemo()
+        case .refreshable:
+          RefreshableDemo()
         case .singleProcessInClass:
           SingleProcessInClassDemo()
         case .sharedProcessInClass:

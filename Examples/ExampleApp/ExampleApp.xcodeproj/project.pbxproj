@@ -15,6 +15,7 @@
 		9506D56E2AB5880B00472C0D /* Button+loadingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9506D56D2AB5880B00472C0D /* Button+loadingButton.swift */; };
 		9506D5702AB5882100472C0D /* View+loading.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9506D56F2AB5882100472C0D /* View+loading.swift */; };
 		9506D5752AB5C98800472C0D /* Root.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9506D5742AB5C98800472C0D /* Root.swift */; };
+		955A06222AC68DC10053E5DF /* RefreshableDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 955A06212AC68DC10053E5DF /* RefreshableDemo.swift */; };
 		95A9CB842AB9FFEF001BFF02 /* SingleProcessDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A9CB832AB9FFEF001BFF02 /* SingleProcessDemo.swift */; };
 		95A9CB862AB9FFF8001BFF02 /* SharedProcessDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A9CB852AB9FFF8001BFF02 /* SharedProcessDemo.swift */; };
 		95A9CB8A2ABA0017001BFF02 /* SingleProcessInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A9CB892ABA0017001BFF02 /* SingleProcessInClassDemo.swift */; };
@@ -33,6 +34,7 @@
 		9506D56D2AB5880B00472C0D /* Button+loadingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Button+loadingButton.swift"; sourceTree = "<group>"; };
 		9506D56F2AB5882100472C0D /* View+loading.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+loading.swift"; sourceTree = "<group>"; };
 		9506D5742AB5C98800472C0D /* Root.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Root.swift; sourceTree = "<group>"; };
+		955A06212AC68DC10053E5DF /* RefreshableDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshableDemo.swift; sourceTree = "<group>"; };
 		95A9CB832AB9FFEF001BFF02 /* SingleProcessDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleProcessDemo.swift; sourceTree = "<group>"; };
 		95A9CB852AB9FFF8001BFF02 /* SharedProcessDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedProcessDemo.swift; sourceTree = "<group>"; };
 		95A9CB892ABA0017001BFF02 /* SingleProcessInClassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleProcessInClassDemo.swift; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 				95A9CB852AB9FFF8001BFF02 /* SharedProcessDemo.swift */,
 				9506D55B2AB5876400472C0D /* LoadableDemo.swift */,
 				C40E3B5E2AC3F09800A2707D /* RestartableDemo.swift */,
+				955A06212AC68DC10053E5DF /* RefreshableDemo.swift */,
 			);
 			path = "Demo - In SwiftUI View";
 			sourceTree = "<group>";
@@ -207,6 +210,7 @@
 				9506D56E2AB5880B00472C0D /* Button+loadingButton.swift in Sources */,
 				9506D55C2AB5876400472C0D /* LoadableDemo.swift in Sources */,
 				9506D55A2AB5876400472C0D /* App.swift in Sources */,
+				955A06222AC68DC10053E5DF /* RefreshableDemo.swift in Sources */,
 				9506D5702AB5882100472C0D /* View+loading.swift in Sources */,
 				95A9CB902ABA145A001BFF02 /* LoadableInClassDemo.swift in Sources */,
 				95A9CB8A2ABA0017001BFF02 /* SingleProcessInClassDemo.swift in Sources */,
