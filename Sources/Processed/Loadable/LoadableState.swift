@@ -22,90 +22,127 @@
 
 import Foundation
 
+/// An enumeration representing the possible states of a loadable resource.
 public enum LoadableState<Value> {
-    case absent
-    case loading
-    case error(Error)
-    case loaded(Value)
+
+  /// Represents the state where the resource has not yet been requested or is missing.
+  case absent
+
+  /// Represents the state where the resource is currently being loaded.
+  case loading
+
+  /// Represents the state where an error occurred during the loading process.
+  ///
+  /// - Parameter Error: The error that occurred while attempting to load the resource.
+  case error(Error)
+
+  /// Represents the state where the resource has been successfully loaded.
+  ///
+  /// - Parameter Value: The successfully loaded resource.
+  case loaded(Value)
 }
+
 
 extension LoadableState: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        switch self {
-        case .absent:
-            return "absent"
-        case .loading:
-            return "loading"
-        case .error(let error):
-            return "error(\(error.localizedDescription))"
-        case .loaded(let value):
-            return "loaded(\(value))"
-        }
+  public var debugDescription: String {
+    switch self {
+    case .absent:
+      return "absent"
+    case .loading:
+      return "loading"
+    case .error(let error):
+      return "error(\(error.localizedDescription))"
+    case .loaded(let value):
+      return "loaded(\(value))"
     }
+  }
 }
 
+/// An extension providing utility methods for manipulating and querying the state of `LoadableState`.
 extension LoadableState {
 
-    public mutating func setAbsent() {
-        self = .absent
-    }
+  /// Sets the state to `absent`.
+  public mutating func setAbsent() {
+    self = .absent
+  }
 
-    public mutating func setLoading() {
-        self = .loading
-    }
+  /// Sets the state to `loading`.
+  public mutating func setLoading() {
+    self = .loading
+  }
 
-    public mutating func setError(_ error: Swift.Error) {
-        self = .error(error)
-    }
+  /// Sets the state to `error` with the given error payload.
+  ///
+  /// - Parameter error: The error that occurred while attempting to load the resource.
+  public mutating func setError(_ error: Swift.Error) {
+    self = .error(error)
+  }
 
-    public mutating func setValue(_ value: Value) {
-        self = .loaded(value)
-    }
+  /// Sets the state to a mock`error` object.
+  ///
+  /// You can use this for testing or previewing purposes.
+  public mutating func setMockError() {
+    self = .error(NSError(domain: "mockerror", code: 0))
+  }
 
-    // MARK: - Convenience Methods
+  /// Sets the state to `loaded` with the given value payload.
+  ///
+  /// - Parameter value: The successfully loaded resource.
+  public mutating func setValue(_ value: Value) {
+    self = .loaded(value)
+  }
 
-    public var isAbsent: Bool {
-        if case .absent = self { return true }
-        return false
-    }
+  // MARK: - Convenience Methods
 
-    public var isLoading: Bool {
-        if case .loading = self { return true }
-        return false
-    }
+  /// A Boolean value indicating whether the state is `absent`.
+  public var isAbsent: Bool {
+    if case .absent = self { return true }
+    return false
+  }
 
-    public var isError: Bool {
-        if case .error = self { return true }
-        return false
-    }
+  /// A Boolean value indicating whether the state is `loading`.
+  public var isLoading: Bool {
+    if case .loading = self { return true }
+    return false
+  }
 
-    public var isLoaded: Bool {
-        if case .loaded = self { return true }
-        return false
-    }
+  /// A Boolean value indicating whether the state is `error`.
+  public var isError: Bool {
+    if case .error = self { return true }
+    return false
+  }
 
-    public var error: Swift.Error? {
-        if case .error(let error) = self { return error }
-        return nil
-    }
+  /// A Boolean value indicating whether the state is `loaded`.
+  public var isLoaded: Bool {
+    if case .loaded = self { return true }
+    return false
+  }
 
-    public var data: Value? {
-        if case .loaded(let data) = self { return data }
-        return nil
-    }
+  /// The error payload if the state is `error`, otherwise `nil`.
+  public var error: Swift.Error? {
+    if case .error(let error) = self { return error }
+    return nil
+  }
+
+  /// The value payload if the state is `loaded`, otherwise `nil`.
+  public var data: Value? {
+    if case .loaded(let data) = self { return data }
+    return nil
+  }
 }
 
+extension LoadableState: Sendable where Value: Sendable {}
 extension LoadableState: Equatable where Value: Equatable {
-    nonisolated public static func == (
-        lhs: LoadableState,
-        rhs: LoadableState
-    ) -> Bool {
-        switch (lhs, rhs) {
-        case (.absent, .absent): return true
-        case (.loading, .loading): return true
-        case (.error, .error): return true
-        case (.loaded(let leftData), .loaded(let rightData)): return leftData == rightData
-        default: return false
-        }
+  nonisolated public static func == (
+    lhs: LoadableState,
+    rhs: LoadableState
+  ) -> Bool {
+    switch (lhs, rhs) {
+    case (.absent, .absent): return true
+    case (.loading, .loading): return true
+    case (.error, .error): return true
+    case (.loaded(let leftData), .loaded(let rightData)): return leftData == rightData
+    default: return false
     }
+  }
 }

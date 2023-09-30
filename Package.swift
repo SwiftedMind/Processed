@@ -1,24 +1,20 @@
-// swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+// swift-tools-version: 5.8
 
 import PackageDescription
 
 let package = Package(
-    name: "Processed",
-    platforms: [.iOS(.v15), .watchOS(.v9), .macOS(.v10_14), .tvOS(.v16), .visionOS(.v1)],
-    products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "Processed",
-            targets: ["Processed"]),
-    ],
-    targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "Processed"),
-        .testTarget(
-            name: "ProcessedTests",
-            dependencies: ["Processed"]),
-    ]
+  name: "Processed",
+  platforms: [.iOS(.v15), .watchOS(.v8), .macOS(.v13), .tvOS(.v15)],
+  products: [
+    .library(
+      name: "Processed",
+      targets: ["Processed"]),
+  ],
+  targets: [
+    .target(
+      name: "Processed"),
+    .testTarget(
+      name: "ProcessedTests",
+      dependencies: ["Processed"]),
+  ]
 )

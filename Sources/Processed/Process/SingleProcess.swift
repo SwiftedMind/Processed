@@ -22,25 +22,25 @@
 
 import SwiftUI
 
-/// A unique identifier for a process.
+/// An identifier for a unique process.
 public struct SingleProcess: Equatable, Sendable {
-    /// The unique identifier for the process.
-    var id: String
-    /// The date when the process was initialized.
-    var initializedAt: Date
-
-    /// Initializes a new unique process.
-    /// - Parameters:
-    ///   - id: The unique identifier for the process. Defaults to a new UUID.
-    ///   - initializedAt: The date when the process was initialized. Defaults to current date and time.
-    public init(id: String = UUID().uuidString, initializedAt: Date = .now) {
-        self.id = id
-        self.initializedAt = initializedAt
-    }
+  /// The identifier for the process.
+  var id: String
+  /// The date when the process was initialized.
+  var initializedAt: Date
+  
+  /// Initializes a new unique process.
+  /// - Parameters:
+  ///   - id: The unique identifier for the process. Defaults to a new UUID.
+  ///   - initializedAt: The date when the process was initialized. Defaults to current date and time.
+  public init(id: String = UUID().uuidString, initializedAt: Date = .now) {
+    self.id = id
+    self.initializedAt = initializedAt
+  }
 }
 
 extension SingleProcess: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "\(id)"
-    }
+  public var debugDescription: String {
+    "\(id)"
+  }
 }

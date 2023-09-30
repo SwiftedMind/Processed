@@ -25,55 +25,107 @@ import Processed
 
 struct Root: View {
 
-    enum Destination: Hashable, CaseIterable {
-        case viewDemo
-        case viewModelDemo
+  enum Destination: Hashable {
+    case singleProcess
+    case sharedProcess
+    case loadable
+    case restartable
+    case refreshable
+    case singleProcessInClass
+    case sharedProcessInClass
+    case loadableInClass
+  }
 
-        var title: String {
-            switch self {
-            case .viewDemo: "View Demo"
-            case .viewModelDemo: "ViewModel Demo"
-            }
-        }
+  @State var path: [Destination] = []
 
-        var description: String {
-            switch self {
-            case .viewDemo: "See how you can use the @Loadable and @Process property wrappers directly in your views."
-            case .viewModelDemo: "See how to use LoadableState and ProcessState in an ObservableObject."
-            }
+  var body: some View {
+    NavigationStack(path: $path) {
+      List {
+        header
+        Section {
+          NavigationLink(value: Destination.singleProcess) {
+            Text("Single process")
+          }
+          NavigationLink(value: Destination.sharedProcess) {
+            Text("Shared process")
+          }
+          NavigationLink(value: Destination.loadable) {
+            Text("Loadable")
+          }
+          NavigationLink(value: Destination.restartable) {
+            Text("Restartable Loadable")
+          }
+          NavigationLink(value: Destination.restartable) {
+            Text("Refreshable Loadable")
+          }
+        } header: {
+          Text("SwiftUI View Demos")
+        } footer: {
+          Text("See how you can use the `@Loadable` and `@Process` property wrappers directly in your views.")
         }
+        Section {
+          NavigationLink(value: Destination.singleProcessInClass) {
+            Text("Single process in class")
+          }
+          NavigationLink(value: Destination.sharedProcessInClass) {
+            Text("Shared process in class")
+          }
+          NavigationLink(value: Destination.loadableInClass) {
+            Text("Loadable in class")
+          }
+        } header: {
+          Text("Class Demos")
+        } footer: {
+          Text("See how you can use `LoadableSupport` and `ProcessSupport` in an `ObservableObject` or any other class.")
+        }
+      }
+      .navigationTitle("Demos")
+      .navigationBarTitleDisplayMode(.inline)
+      .navigationDestination(for: Destination.self) { destination in
+        switch destination {
+        case .singleProcess:
+          SingleProcessDemo()
+        case .sharedProcess:
+          SharedProcessDemo()
+        case .loadable:
+          LoadableDemo()
+        case .restartable:
+          RestartableDemo()
+        case .refreshable:
+          RefreshableDemo()
+        case .singleProcessInClass:
+          SingleProcessInClassDemo()
+        case .sharedProcessInClass:
+          SharedProcessInClassDemo()
+        case .loadableInClass:
+          LoadableInClassDemo()
+        }
+      }
     }
+  }
 
-    @State var path: [Destination] = []
-
-    var body: some View {
-        NavigationStack(path: $path) {
-            List {
-                ForEach(Destination.allCases, id: \.self) { destination in
-                    NavigationLink(value: destination) {
-                        VStack(alignment: .leading) {
-                            Text(destination.title)
-                            Text(destination.description)
-                                .foregroundStyle(.secondary)
-                                .font(.caption)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-            }
-            .navigationTitle("Demos")
-            .navigationDestination(for: Destination.self) { destination in
-                switch destination {
-                case .viewDemo:
-                    ViewDemo()
-                case .viewModelDemo:
-                    ViewModelDemo()
-                }
-            }
-        }
+  @ViewBuilder @MainActor
+  private var header: some View {
+    Section {
+      VStack {
+        Image(.logo)
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(height: 80)
+        Text("Processed")
+          .font(.system(size: 40, weight: .semibold))
+          .frame(maxWidth: .infinity)
+        Text("Demo")
+          .font(.headline)
+          .frame(maxWidth: .infinity)
+          .foregroundStyle(.secondary)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical)
     }
+  }
 }
 
 #Preview {
-    Root().preferredColorScheme(.dark)
+  Root().preferredColorScheme(.dark)
 }

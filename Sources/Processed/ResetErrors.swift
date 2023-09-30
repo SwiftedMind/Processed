@@ -21,13 +21,12 @@
 //
 import Foundation
 
-
-/// An error indicating that s process has been canceled.
-public struct LoadableReset: Error, Sendable, Hashable {
-    public init() {}
+/// An error indicating that s process has been cancelled.
+public struct CancelLoadable: Error, Sendable, Hashable {
+  public init() {}
 }
 
-/// An error indicating that s process has been canceled.
-public struct ProcessReset: Error, Sendable, Hashable {
-    public init() {}
+/// An error indicating that s process has been cancelled.
+public struct CancelProcess: Error, Sendable, Hashable {
+  public init() {}
 }

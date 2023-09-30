@@ -22,211 +22,339 @@
 
 import SwiftUI
 
-/// A property wrapper to manage the state of an asynchronous process.
-@propertyWrapper
-public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
+/// A property wrapper that adds automatic state and `Task` management around a ``Processed/ProcessState``.
+/// It takes care of creating a `Task` to run the process in, cancel any previous `Task` instances and setting
+/// the appropriate loading states that are exposed through its ``wrappedValue``.
+///
+/// You can use this property wrapper in any SwiftUI view.
+/// To start loading a resource, call one of the `run` methods of the `$`-prefixed synthesized property.
+///
+/// ```swift
+/// struct DemoView: View {
+///   @Process var saving
+///
+///   @MainActor func save() {
+///     $saving.run {
+///       try await save()
+///     }
+///   }
+///
+///   var body: some View {
+///     List {
+///       Button("Save") { save() }
+///         .disabled(numbers.isLoading)
+///       switch saving {
+///       case .idle:
+///         Text("Idle")
+///       case .running:
+///         Text("Saving")
+///       case .failed(_, let error):
+///         Text("\(error.localizedDescription)")
+///       case .finished:
+///         Text("Finished Saving")
+///       }
+///     }
+///   }
+/// }
+/// ```
+///
+/// - Note: This is only meant to be used from within SwiftUI views.
+/// If you need the same functionality from a class, please refer to ``Processed/ProcessSupport``.
+@propertyWrapper public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
 
-    @SwiftUI.State private var state: ProcessState<ProcessID>
-    @SwiftUI.State private var task: Task<Void, Never>?
-
-    /// The current state of the process.
-    public var wrappedValue: ProcessState<ProcessID> {
-        get { state }
-        nonmutating set {
-            cancel()
-            state = newValue
-        }
+  @SwiftUI.State private var state: ProcessState<ProcessID>
+  @SwiftUI.State private var task: Task<Void, Never>?
+  
+  /// The current state of the process.
+  ///
+  /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-5h20w``.
+  /// However, doing so will cancel any ongoing task first, to prevent data races.
+  @MainActor public var wrappedValue: ProcessState<ProcessID> {
+    get { state }
+    nonmutating set {
+      cancel()
+      state = newValue
     }
+  }
+  
+  /// Provides an interface for automatic control over the process state,
+  /// through a set of easy to use methods.
+  ///
+  /// Use the `$`-prefixed synthesized property to access these advanced controls.
+  ///
+  /// Example:
+  ///
+  /// ```swift
+  /// @Process var saving
+  /// /* ... */
+  /// $saving.run {
+  ///   try await save()
+  /// }
+  /// ```
+  ///
+  /// You can run different processes on the same state by providing a process identifier:
+  ///
+  /// ```swift
+  /// enum ProcessKind: Equatable {
+  ///   case saving
+  ///   case deleting
+  /// }
+  ///
+  /// @Process<ProcessKind> var action
+  /// /* ... */
+  /// $action.run(.saving) {
+  ///   try await save()
+  /// }
+  /// $action.run(.deleting) {
+  ///   try await delete()
+  /// }
+  /// ```
+  @MainActor public var projectedValue: Binding {
+    .init(state: $state, task: $task)
+  }
+  
+  /// Initializes the process with an initial state.
+  /// - Parameter initialState: The initial state of the process. Defaults to `.idle`.
+  public init(wrappedValue initialState: ProcessState<ProcessID> = .idle) {
+    self._state = .init(initialValue: initialState)
+  }
 
-    /// Provides a binding for controlling the process.
-    public var projectedValue: Binding {
-        .init(state: $state, task: $task)
-    }
+  /// Default initializer for `Process<SingleProcess>`.
+  public init(wrappedValue initialState: ProcessState<ProcessID> = .idle) where ProcessID == SingleProcess {
+    self._state = .init(initialValue: .idle)
+  }
 
-    /// Initializes the process with an initial state.
-    /// - Parameter initialState: The initial state of the process. Defaults to `.idle`.
-    public init(initialState: ProcessState<ProcessID> = .idle) {
-        self._state = .init(initialValue: initialState)
-    }
-
-    /// Default initializer for `Process<SingleProcess>`.
-    public init() where ProcessID == SingleProcess {
-        self._state = .init(initialValue: .idle)
-    }
-
-    /// Cancels any running task associated with this process.
-    private func cancel() {
-        task?.cancel()
-        task = nil
-    }
+  /// Cancels any running task associated with this process.
+  private func cancel() {
+    task?.cancel()
+    task = nil
+  }
 }
 
 extension Process {
-    /// A binding for controlling the process's state and execution.
-    @propertyWrapper public struct Binding {
-        @SwiftUI.Binding var state: ProcessState<ProcessID>
-        @SwiftUI.Binding var task: Task<Void, Never>?
-
-        public var wrappedValue: ProcessState<ProcessID> {
-            get { state }
-            nonmutating set {
-                cancel()
-                state = newValue
-            }
-        }
-
-        /// Provides a binding for controlling the process.
-        public var projectedValue: Binding {
-            self
-        }
-
-        public init(
-            state: SwiftUI.Binding<ProcessState<ProcessID>>,
-            task: SwiftUI.Binding<Task<Void, Never>?>
-        ) {
-            self._state = state
-            self._task = task
-        }
-
-        public init(_ binding: Process<ProcessID>.Binding) {
-            self = binding
-        }
-
-        public static func mocked(
-            _ container: ProcessMockContainer<ProcessID>
-        ) -> Process<ProcessID>.Binding {
-            .init(state: container.processBinding, task: container.taskBinding)
-        }
-
-        public static func mocked() -> Process<ProcessID>.Binding {
-            let container = ProcessMockContainer<ProcessID>()
-            return .init(state: container.processBinding, task: container.taskBinding)
-        }
-
-        public func cancel() {
-            task?.cancel()
-            task = nil
-        }
-
-        public func reset() {
-            if case .idle = state {} else {
-                state = .idle
-            }
-            cancel()
-        }
-
-        // MARK: - Run
-
-        /// Runs a process with the provided asynchronous closure.
-        /// - Parameters:
-        ///   - process: The process to run.
-        ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`.
-        ///   - priority: The priority of the task.
-        ///   - block: The asynchronous block of code to execute.
-        /// - Returns: The task representing the process execution.
-        @discardableResult public func run(
-            _ process: ProcessID,
-            silently runSilently: Bool = false,
-            priority: TaskPriority? = nil,
-            block: @escaping () async throws -> Void
-        ) -> Task<Void, Never> {
-            cancel()
-            let task = Task(priority: priority) {
-                await runTaskBody(process: process, runSilently: runSilently, block: block)
-            }
-            self.task = task
-            return task
-        }
-
-        public func run(
-            _ process: ProcessID,
-            silently runSilently: Bool = false,
-            block: @escaping () async throws -> Void
-        ) async {
-            await runTaskBody(process: process, runSilently: runSilently, block: block)
-        }
-
-        public func run(
-            silently runSilently: Bool = false,
-            block: @escaping () async throws -> Void
-        ) where ProcessID == SingleProcess {
-            run(.init(), silently: runSilently, block: block)
-        }
-
-        public func run(
-            silently runSilently: Bool = false,
-            block: @escaping () async throws -> Void
-        ) async where ProcessID == SingleProcess {
-            await runTaskBody(process: .init(), runSilently: runSilently, block: block)
-        }
-
-        // MARK: - Run Detached
-
-        /// Runs a process with the provided asynchronous closure in a detached task.
-        /// - Parameters:
-        ///   - process: The process to run.
-        ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`.
-        ///   - priority: The priority of the task.
-        ///   - block: The asynchronous block of code to execute.
-        /// - Returns: The task representing the process execution.
-        @discardableResult public func runDetached(
-            _ process: ProcessID,
-            silently runSilently: Bool = false,
-            priority: TaskPriority? = nil,
-            block: @escaping () async throws -> Void
-        ) -> Task<Void, Never> {
-            cancel()
-            let task = Task.detached(priority: priority) {
-                await runTaskBody(process: process, runSilently: runSilently, block: block)
-            }
-            self.task = task
-            return task
-        }
-
-        public func runDetached(
-            _ process: ProcessID,
-            silently runSilently: Bool = false,
-            block: @escaping () async throws -> Void
-        ) async {
-            await runDetached(process, silently: runSilently, block: block).value
-        }
-
-        public func runDetached(
-            silently runSilently: Bool = false,
-            block: @escaping () async throws -> Void
-        ) where ProcessID == SingleProcess {
-            runDetached(.init(), silently: runSilently, block: block)
-        }
-
-         public func runDetached(
-            silently runSilently: Bool = false,
-            block: @escaping () async throws -> Void
-        ) async where ProcessID == SingleProcess {
-            await runDetached(.init(), silently: runSilently, block: block).value
-        }
-
-        // MARK: - Internal
-
-        private func runTaskBody(
-            process: ProcessID,
-            runSilently: Bool,
-            block: @escaping () async throws -> Void
-        ) async {
-            do {
-                if !runSilently {
-                    state = .running(process)
-                }
-                try await block()
-                state = .finished(process)
-            } catch is CancellationError {
-                // Task was cancelled. Don't change the state anymore
-            } catch is ProcessReset {
-                cancel()
-            } catch {
-                state = .failed(process: process, error: error)
-            }
-        }
+  /// An object providing an interface for automatic control over the loading process,
+  /// through a set of easy to use methods.
+  @propertyWrapper public struct Binding {
+    @SwiftUI.Binding var state: ProcessState<ProcessID>
+    @SwiftUI.Binding var task: Task<Void, Never>?
+    
+    /// The current state of the process.
+    ///
+    /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-5h20w``.
+    /// However, doing so will cancel any ongoing task first, to prevent data races.
+    public var wrappedValue: ProcessState<ProcessID> {
+      get { state }
+      nonmutating set {
+        cancel()
+        state = newValue
+      }
     }
+    
+    /// Provides an interface for automatic control over the process state,
+    /// through a set of easy to use methods.
+    ///
+    /// Use the `$`-prefixed synthesized property to access these advanced controls.
+    ///
+    /// Example:
+    ///
+    /// ```swift
+    /// @Process var saving
+    /// /* ... */
+    /// $saving.run {
+    ///   try await save()
+    /// }
+    /// ```
+    ///
+    /// You can run different processes on the same state by providing a process identifier:
+    ///
+    /// ```swift
+    /// enum ProcessKind: Equatable {
+    ///   case saving
+    ///   case deleting
+    /// }
+    ///
+    /// @Process<ProcessKind> var action
+    /// /* ... */
+    /// $action.run(.saving) {
+    ///   try await save()
+    /// }
+    /// $action.run(.deleting) {
+    ///   try await delete()
+    /// }
+    /// ```
+    public var projectedValue: Binding {
+      self
+    }
+    
+    public init(
+      state: SwiftUI.Binding<ProcessState<ProcessID>>,
+      task: SwiftUI.Binding<Task<Void, Never>?>
+    ) {
+      self._state = state
+      self._task = task
+    }
+    
+    public init(_ binding: Process<ProcessID>.Binding) {
+      self = binding
+    }
+    
+    /// Cancels the task of an ongoing process.
+    ///
+    /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
+    public func cancel() {
+      task?.cancel()
+      task = nil
+    }
+
+    /// Cancels the task of an ongoing process and resets the state to `.idle`.
+    ///
+    /// - Note: You are responsible for cooperating with the task cancellation within the process closures.
+    public func reset() {
+      if case .idle = state {} else {
+        state = .idle
+      }
+      cancel()
+    }
+
+    private func setLoadingStateIfNeeded(runSilently: Bool, process: ProcessID) {
+      if !runSilently {
+        if case .running(let runningProcess) = state, runningProcess == process {} else {
+          state = .running(process)
+        }
+      }
+    }
+
+    // MARK: - Run
+    
+    /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Process/Binding/cancel()``
+    ///  or ``Processed/Process/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Process/Binding/run(silently:block:)-5h20w`` from within a `.task` view modifier.
+    ///
+    /// - Parameters:
+    ///   - process: The process to run.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - priority: The priority of the task. Defaults to `nil`.
+    ///   - block: The asynchronous block of code to execute.
+    ///
+    /// - Returns: The task representing the process execution.
+    @MainActor @discardableResult public func run(
+      _ process: ProcessID,
+      silently runSilently: Bool = false,
+      priority: TaskPriority? = nil,
+      block: @MainActor @escaping () async throws -> Void
+    ) -> Task<Void, Never> {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
+      let task = Task(priority: priority) {
+        await runTaskBody(process: process, runSilently: runSilently, block: block)
+      }
+      self.task = task
+      return task
+    }
+    
+    /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Parameters:
+    ///   - process: The process to run.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - block: The asynchronous block of code to execute.
+    @MainActor public func run(
+      _ process: ProcessID,
+      silently runSilently: Bool = false,
+      block: @MainActor @escaping () async throws -> Void
+    ) async {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
+      await runTaskBody(process: process, runSilently: runSilently, block: block)
+    }
+    
+    /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Process/Binding/cancel()``
+    ///  or ``Processed/Process/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Process/Binding/run(_:silently:block:)`` from within a `.task` view modifier.
+    ///
+    /// - Parameters:
+    ///   - process: The process to run.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - priority: The priority of the task. Defaults to `nil`.
+    ///   - block: The asynchronous block of code to execute.
+    ///
+    /// - Returns: The task representing the process execution.
+    @MainActor @discardableResult public func run(
+      silently runSilently: Bool = false,
+      block: @MainActor @escaping () async throws -> Void
+    ) -> Task<Void, Never> where ProcessID == SingleProcess {
+      run(.init(), silently: runSilently, block: block)
+    }
+    
+    /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - block: The asynchronous block of code to execute.
+    @MainActor public func run(
+      silently runSilently: Bool = false,
+      block: @MainActor @escaping () async throws -> Void
+    ) async where ProcessID == SingleProcess {
+      await run(.init(), silently: runSilently, block: block)
+    }
+    
+    // MARK: - Internal
+    
+    @MainActor private func runTaskBody(
+      process: ProcessID,
+      runSilently: Bool,
+      block: @MainActor @escaping () async throws -> Void
+    ) async {
+      do {
+        try await block()
+        state = .finished(process)
+      } catch is CancellationError {
+        // Task was cancelled. Don't change the state anymore
+      } catch is CancelProcess {
+        cancel()
+      } catch {
+        state = .failed(process: process, error: error)
+      }
+    }
+  }
 }
 
+/// An object providing an interface for automatic control over the loading process,
+/// through a set of easy to use methods.
 public typealias ProcessBinding<SingleProcess: Equatable> = Process<SingleProcess>.Binding
