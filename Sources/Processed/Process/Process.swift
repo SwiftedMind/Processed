@@ -235,6 +235,10 @@ extension Process {
     /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
     /// while a returned value will cause a final `.finished` state to be set.
     ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Process/Binding/cancel()``
+    ///  or ``Processed/Process/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Process/Binding/run(silently:block:)-5h20w`` from within a `.task` view modifier.
+    ///
     /// - Parameters:
     ///   - process: The process to run.
     ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
@@ -290,6 +294,10 @@ extension Process {
     ///
     /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
     /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Process/Binding/cancel()``
+    ///  or ``Processed/Process/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Process/Binding/run(_:silently:block:)`` from within a `.task` view modifier.
     ///
     /// - Parameters:
     ///   - process: The process to run.

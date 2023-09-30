@@ -203,6 +203,10 @@ extension Loadable {
     ///
     /// Throwing an error inside the `block` closure will cause a final `.error` state to be set.
     ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Loadable/Binding/cancel()``
+    ///  or ``Processed/Loadable/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Loadable/Binding/load(silently:block:)-1qpbk`` from within a `.task` view modifier.
+    ///
     /// - Parameters:
     ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
     ///   - priority: The priority level for the `Task` that is created and used for the loading process.
@@ -282,6 +286,10 @@ extension Loadable {
     ///
     /// Throwing an error inside the `block` closure will cause a final `.error` state to be set, 
     /// while a returned value will cause a final `.loaded` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Loadable/Binding/cancel()``
+    ///  or ``Processed/Loadable/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Loadable/Binding/load(silently:block:)-333x6`` from within a `.task` view modifier.
     ///
     /// - Parameters:
     ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
