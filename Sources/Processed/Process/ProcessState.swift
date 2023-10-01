@@ -122,26 +122,11 @@ extension ProcessState {
     self = .failed(process: process, error: error)
   }
 
-  /// Sets the state to `.failed` with a mock`error` object, for the given process.
-  /// 
-  /// You can use this for testing or previewing purposes.
-  /// - Parameter process: The process that failed.
-  public mutating func setMockFailed(_ process: ProcessID) {
-    self = .failed(process: process, error: NSError(domain: "mockerror", code: 0))
-  }
-
   /// Sets the process state to `.failed`.
   /// - Parameters:
   ///   - error: The error causing the failure.
   public mutating func setFailed(with error: Swift.Error) where ProcessID == SingleProcess {
     self = .failed(process: .init(), error: error)
-  }
-
-  /// Sets the state to `.failed` with a mock`error` object.
-  ///
-  /// You can use this for testing or previewing purposes.
-  public mutating func setMockFailed() where ProcessID == SingleProcess {
-    self = .failed(process: .init(), error: NSError(domain: "mockerror", code: 0))
   }
 
   /// Sets the process state to `.finished` with the given process.
