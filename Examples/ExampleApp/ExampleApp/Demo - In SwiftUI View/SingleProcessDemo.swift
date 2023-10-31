@@ -87,8 +87,15 @@ struct SingleProcessDemo: View {
   }
 
   @MainActor func runSuccess() {
-    $process.run {
+    $process.run(.init(), interrupts: [.milliseconds(100), .milliseconds(500), .seconds(1)]) {
       try await Task.sleep(for: .seconds(2))
+    } onInterrupt: { delay in
+      if delay == .seconds(1) {
+        print("Process Timeout - Resetting")
+        $process.reset()
+      } else {
+        print("Interrupt - (\(delay))")
+      }
     }
   }
 

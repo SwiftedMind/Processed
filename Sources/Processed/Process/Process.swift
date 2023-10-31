@@ -261,6 +261,38 @@ extension Process {
       return task
     }
     
+    @available(iOS 16.0, *)
+    @MainActor @discardableResult public func run(
+      _ process: ProcessID,
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      priority: TaskPriority? = nil,
+      block: @MainActor @escaping () async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ delay: Duration) -> Void
+    ) -> Task<Void, Never> {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
+      let task = Task(priority: priority) {
+        await withTaskGroup(of: Void.self) { group in
+          group.addTask {
+            await runTaskBody(process: process, runSilently: runSilently, block: block)
+          }
+          
+          // Add interrupt callbacks
+          for delay in interrupts {
+            _ = group.addTaskUnlessCancelled {
+              do {
+                try await Task.sleep(for: delay)
+                await onInterrupt(delay)
+              } catch {}
+            }
+          }
+        }
+      }
+      self.task = task
+      return task
+    }
+    
     /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
     /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
     ///
@@ -342,6 +374,42 @@ extension Process {
       block: @MainActor @escaping () async throws -> Void
     ) async {
       do {
+        try await block()
+        state = .finished(process)
+      } catch is CancellationError {
+        // Task was cancelled. Don't change the state anymore
+      } catch is CancelProcess {
+        cancel()
+      } catch {
+        state = .failed(process: process, error: error)
+      }
+    }
+    
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor private func runTaskBody(
+      process: ProcessID,
+      runSilently: Bool,
+      interrupts: [Duration],
+      block: @MainActor @escaping () async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ delay: Duration) -> Void
+    ) async {
+      do {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+          group.addTask {
+            await runTaskBody(process: process, runSilently: runSilently, block: block)
+          }
+          
+          // Add interrupt callbacks
+          for delay in interrupts {
+            _ = group.addTaskUnlessCancelled {
+              try await Task.sleep(for: delay)
+              await onInterrupt(delay)
+            }
+          }
+          
+          try await group.waitForAll()
+        }
+        
         try await block()
         state = .finished(process)
       } catch is CancellationError {
