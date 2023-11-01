@@ -73,7 +73,7 @@ struct SimpleProcessDemo: View {
         HStack {
           Text("Running")
           Spacer()
-          ProgressView()
+          ProgressView().id(UUID())
         }
       case .failed(_, let error):
         Text("An error occurred: \(error.localizedDescription)")

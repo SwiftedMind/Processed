@@ -23,32 +23,34 @@
 import SwiftUI
 import Processed
 
-struct ProcessInterruptsInClassDemo: View {
+struct LoadableInterruptsInClassDemo: View {
 
-  @MainActor final class ViewModel: ObservableObject, ProcessSupport {
-    
-    @Published var process: ProcessState<SingleProcess> = .idle
+  @MainActor final class ViewModel: ObservableObject, LoadableSupport {
+
+    @Published var numbers: LoadableState<[Int]> = .absent
     @Published var showLoadingDelay: Bool = false
 
-    func cancelProcess() {
-      cancel(\.process)
+    func cancelNumbers() {
+      cancel(\.numbers)
     }
 
-    func resetProcess() {
-      reset(\.process)
+    func resetNumbers() {
+      reset(\.numbers)
     }
-
-    func runSuccess() {
-      run(\.process) {
+    
+    func load() {
+      load(\.numbers) {
         try await Task.sleep(for: .seconds(2))
+        return [1, 2, 3, 4, 5]
       }
     }
-
-    func runTimeout() {
+    
+    func loadWithTimeout() {
       showLoadingDelay = false
       // Show "delay" info after 1 second, and time out after 2 seconds
-      run(\.process, interrupts: [.seconds(2), .seconds(3)]) {
+      load(\.numbers, interrupts: [.seconds(2), .seconds(3)]) {
         try await Task.sleep(for: .seconds(10))
+        return [1, 2, 3, 4, 5]
       } onInterrupt: { [weak self] accumulatedDelay in
         guard let self else { return }
         switch accumulatedDelay {
@@ -63,80 +65,80 @@ struct ProcessInterruptsInClassDemo: View {
   }
 
   @StateObject var viewModel = ViewModel()
-
+  
   var body: some View {
     List {
       buttons
-      processState
+      loadableState
     }
-    .animation(.default, value: viewModel.process)
+    .animation(.default, value: viewModel.numbers)
     .animation(.default, value: viewModel.showLoadingDelay)
-    .navigationTitle("Process Interrupts (Protocol)")
+    .navigationTitle("Loadable Interrupts (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
   }
-
+  
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Run process with success") {
-        viewModel.runSuccess()
+      Button("Load all numbers") {
+        viewModel.load()
       }
-      .disabled(viewModel.process.isRunning)
-      Button("Run process with timeout") {
-        viewModel.runTimeout()
+      Button("Load with timeout") {
+        viewModel.loadWithTimeout()
       }
-      .disabled(viewModel.process.isRunning)
     }
-
+    
     Section {
       Button("Cancel") {
-        // Cancel the current process and keep the state where it currently is
+        // Cancel the current loading process and keep the state where it currently is
         // so that you can start a new process without introducing data races
-        viewModel.cancelProcess()
+        viewModel.cancelNumbers()
       }
       Button("Reset") {
-        // Cancel the current process and reset the state to .idle
-        viewModel.resetProcess()
+        // Cancel the current loading process and reset the state to .absent
+        viewModel.resetNumbers()
       }
     }
   }
-
+  
   @ViewBuilder @MainActor
-  private var processState: some View {
-    Section {
-      switch viewModel.process {
-      case .idle:
-        Text("Idle")
-      case .running:
-        HStack {
-          Text("Running")
-          Spacer()
-          ProgressView().id(UUID())
+  private var loadableState: some View {
+    switch viewModel.numbers {
+    case .absent:
+      EmptyView()
+    case .loading:
+      VStack {
+        ProgressView().id(UUID()).padding(.vertical)
+        if viewModel.showLoadingDelay {
+          Text("The process seems to run longer than expected")
+            .lineLimit(2, reservesSpace: true)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.secondary)
         }
-      case .failed(_, let error):
-        switch error {
-        case is TimeoutError:
-          Text("Timeout")
-            .foregroundStyle(.red)
-        default:
-          Text("An error occurred: \(error.localizedDescription)")
-            .foregroundStyle(.red)
-        }
-      case .finished:
-        Text("Success!")
       }
-    } header: {
-      Text("Process state")
-    } footer: {
-      if viewModel.showLoadingDelay {
-        Text("The process seems to run longer than expected")
+      .frame(maxWidth: .infinity)
+      .listRowBackground(Color.clear)
+    case .error(let error):
+      switch error {
+      case is TimeoutError:
+        Text("Timeout")
+          .foregroundStyle(.red)
+      default:
+        Text("An error occurred: \(error.localizedDescription)")
+          .foregroundStyle(.red)
+      }
+    case .loaded(let numbers):
+      ForEach(numbers, id: \.self) { number in
+        Text(String(number))
       }
     }
   }
 }
 
 #Preview {
-  NavigationStack {
-    ProcessInterruptsInClassDemo().preferredColorScheme(.dark)
+  MainActor.assumeIsolated {
+    NavigationStack {
+      LoadableInterruptsInClassDemo().preferredColorScheme(.dark)
+    }
   }
 }

@@ -82,7 +82,7 @@ struct SharedProcessDemo: View {
         HStack {
           Text("Running \(process.rawValue)")
           Spacer()
-          ProgressView()
+          ProgressView().id(UUID())
         }
       case .failed(let process, let error):
         Text("An error occurred during \(process.rawValue): \(error.localizedDescription)")

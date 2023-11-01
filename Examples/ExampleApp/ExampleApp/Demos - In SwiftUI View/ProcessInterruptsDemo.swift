@@ -75,7 +75,7 @@ struct ProcessInterruptsDemo: View {
         HStack {
           Text("Running")
           Spacer()
-          ProgressView()
+          ProgressView().id(UUID())
         }
       case .failed(_, let error):
         switch error {
@@ -104,7 +104,6 @@ struct ProcessInterruptsDemo: View {
     }
   }
 
-  // TODO: Clean up `showLoadingDelay` on termination (#2)
   @MainActor func runTimeout() {
     showLoadingDelay = false
     // Show "delay" info after 1 second, and time out after 2 seconds

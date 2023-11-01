@@ -16,6 +16,8 @@
 		4E33316F2AF2240000DD6B82 /* RefreshableLoadableDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E33316E2AF2240000DD6B82 /* RefreshableLoadableDemo.swift */; };
 		4E3331712AF2704800DD6B82 /* ProcessInterruptsInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3331702AF2704800DD6B82 /* ProcessInterruptsInClassDemo.swift */; };
 		4E3331732AF27E5700DD6B82 /* BasicLoadableInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3331722AF27E5700DD6B82 /* BasicLoadableInClassDemo.swift */; };
+		4E3331902AF2E78200DD6B82 /* LoadableInterruptsDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E33318F2AF2E78200DD6B82 /* LoadableInterruptsDemo.swift */; };
+		4E3331922AF2EA7600DD6B82 /* LoadableInterruptsInClassDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3331912AF2EA7600DD6B82 /* LoadableInterruptsInClassDemo.swift */; };
 		9506D55A2AB5876400472C0D /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9506D5592AB5876400472C0D /* App.swift */; };
 		9506D55E2AB5876700472C0D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9506D55D2AB5876700472C0D /* Assets.xcassets */; };
 		9506D5612AB5876700472C0D /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9506D5602AB5876700472C0D /* Preview Assets.xcassets */; };
@@ -39,6 +41,8 @@
 		4E33316E2AF2240000DD6B82 /* RefreshableLoadableDemo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RefreshableLoadableDemo.swift; sourceTree = "<group>"; };
 		4E3331702AF2704800DD6B82 /* ProcessInterruptsInClassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessInterruptsInClassDemo.swift; sourceTree = "<group>"; };
 		4E3331722AF27E5700DD6B82 /* BasicLoadableInClassDemo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BasicLoadableInClassDemo.swift; sourceTree = "<group>"; };
+		4E33318F2AF2E78200DD6B82 /* LoadableInterruptsDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadableInterruptsDemo.swift; sourceTree = "<group>"; };
+		4E3331912AF2EA7600DD6B82 /* LoadableInterruptsInClassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadableInterruptsInClassDemo.swift; sourceTree = "<group>"; };
 		9506D5562AB5876400472C0D /* ExampleApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExampleApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9506D5592AB5876400472C0D /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		9506D55D2AB5876700472C0D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -129,6 +133,7 @@
 				95A9CB852AB9FFF8001BFF02 /* SharedProcessDemo.swift */,
 				4E3331682AF2237900DD6B82 /* ProcessInterruptsDemo.swift */,
 				4E33316A2AF223D200DD6B82 /* BasicLoadableDemo.swift */,
+				4E33318F2AF2E78200DD6B82 /* LoadableInterruptsDemo.swift */,
 				4E33316C2AF223EC00DD6B82 /* RestartableLoadableDemo.swift */,
 				4E33316E2AF2240000DD6B82 /* RefreshableLoadableDemo.swift */,
 			);
@@ -142,6 +147,7 @@
 				4E3331702AF2704800DD6B82 /* ProcessInterruptsInClassDemo.swift */,
 				95A9CB8B2ABA0027001BFF02 /* MultiProcessInClassDemo.swift */,
 				4E3331722AF27E5700DD6B82 /* BasicLoadableInClassDemo.swift */,
+				4E3331912AF2EA7600DD6B82 /* LoadableInterruptsInClassDemo.swift */,
 				4E3331642AF21E8900DD6B82 /* RestartableLoadableInClassDemo.swift */,
 				4E3331622AF21E8200DD6B82 /* RefreshableLoadableInClassDemo.swift */,
 			);
@@ -222,6 +228,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4E3331922AF2EA7600DD6B82 /* LoadableInterruptsInClassDemo.swift in Sources */,
 				9506D56E2AB5880B00472C0D /* Button+loadingButton.swift in Sources */,
 				4E3331692AF2237900DD6B82 /* ProcessInterruptsDemo.swift in Sources */,
 				9506D55A2AB5876400472C0D /* App.swift in Sources */,
@@ -237,6 +244,7 @@
 				95A9CB862AB9FFF8001BFF02 /* SharedProcessDemo.swift in Sources */,
 				4E33316B2AF223D200DD6B82 /* BasicLoadableDemo.swift in Sources */,
 				9506D5752AB5C98800472C0D /* Root.swift in Sources */,
+				4E3331902AF2E78200DD6B82 /* LoadableInterruptsDemo.swift in Sources */,
 				95A9CB842AB9FFEF001BFF02 /* SimpleProcessDemo.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

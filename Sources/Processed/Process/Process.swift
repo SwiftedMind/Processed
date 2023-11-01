@@ -255,7 +255,7 @@ extension Process {
       cancel()
       setRunningStateIfNeeded(runSilently: runSilently, process: process)
       let task = Task(priority: priority) {
-        await runTaskBody(process: process, runSilently: runSilently, block: block)
+        await runTaskBody(process: process, block: block)
       }
       self.task = task
       return task
@@ -301,7 +301,6 @@ extension Process {
       let task = Task(priority: priority) {
         await runTaskBody(
           process: process,
-          runSilently: runSilently,
           interrupts: interrupts,
           block: block,
           onInterrupt: onInterrupt
@@ -334,7 +333,7 @@ extension Process {
     ) async {
       cancel()
       setRunningStateIfNeeded(runSilently: runSilently, process: process)
-      await runTaskBody(process: process, runSilently: runSilently, block: block)
+      await runTaskBody(process: process, block: block)
     }
     
     /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
@@ -369,7 +368,6 @@ extension Process {
       setRunningStateIfNeeded(runSilently: runSilently, process: process)
       await runTaskBody(
         process: process,
-        runSilently: runSilently,
         interrupts: interrupts,
         block: block,
         onInterrupt: onInterrupt
@@ -503,7 +501,6 @@ extension Process {
     
     @MainActor private func runTaskBody(
       process: ProcessID,
-      runSilently: Bool,
       block: @MainActor @escaping () async throws -> Void
     ) async {
       do {
@@ -523,13 +520,13 @@ extension Process {
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
     @MainActor private func runTaskBody(
       process: ProcessID,
-      runSilently: Bool,
       interrupts: [Duration],
       block: @MainActor @escaping () async throws -> Void,
       onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
     ) async {
       do {
         try await withThrowingTaskGroup(of: Void.self) { group in
+          
           group.addTask {
             try await block()
             state = .finished(process)
@@ -542,15 +539,26 @@ extension Process {
               accumulatedDelay += delay
               try await onInterrupt(accumulatedDelay)
             }
+            
+            // When all interruptions are processed, throw a special error
+            throw InterruptionsDoneError()
           }
           
-          try await group.next()
-          group.cancelAll()
+          do {
+            try await group.next()
+            // Here, the block() Task has finished, so we can cancel the interruptions
+            group.cancelAll()
+          } catch is InterruptionsDoneError {
+            // In this case, the interruptions are processed and we can wair for the block() Task to finish
+            try await group.next()
+          }
         }
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
       } catch is CancelProcess {
         cancel()
+      } catch is ResetProcess {
+        reset()
       } catch {
         state = .failed(process: process, error: error)
       }

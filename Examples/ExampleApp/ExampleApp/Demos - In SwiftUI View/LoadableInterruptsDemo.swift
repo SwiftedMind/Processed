@@ -23,9 +23,10 @@
 import SwiftUI
 import Processed
 
-struct BasicLoadableDemo: View {
+struct LoadableInterruptsDemo: View {
   
   @Loadable var numbers: LoadableState<[Int]>
+  @State var showLoadingDelay: Bool = false
   
   var body: some View {
     List {
@@ -33,7 +34,8 @@ struct BasicLoadableDemo: View {
       loadableState
     }
     .animation(.default, value: numbers)
-    .navigationTitle("Basic Loadable")
+    .animation(.default, value: showLoadingDelay)
+    .navigationTitle("Loadable Interrupts")
     .navigationBarTitleDisplayMode(.inline)
   }
   
@@ -43,8 +45,8 @@ struct BasicLoadableDemo: View {
       Button("Load all numbers") {
         load()
       }
-      Button("Stream numbers") {
-        stream()
+      Button("Load with timeout") {
+        loadWithTimeout()
       }
     }
     
@@ -67,11 +69,27 @@ struct BasicLoadableDemo: View {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView().id(UUID())
-        .frame(maxWidth: .infinity)
-        .listRowBackground(Color.clear)
+      VStack {
+        ProgressView().id(UUID())
+          .padding(.vertical)
+        if showLoadingDelay {
+          Text("The process seems to run longer than expected")
+            .lineLimit(2, reservesSpace: true)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .frame(maxWidth: .infinity)
+      .listRowBackground(Color.clear)
     case .error(let error):
-      Text("An error occurred: \(error.localizedDescription)")
+      switch error {
+      case is TimeoutError:
+        Text("Timeout")
+          .foregroundStyle(.red)
+      default:
+        Text("An error occurred: \(error.localizedDescription)")
+          .foregroundStyle(.red)
+      }
     case .loaded(let numbers):
       ForEach(numbers, id: \.self) { number in
         Text(String(number))
@@ -86,13 +104,19 @@ struct BasicLoadableDemo: View {
     }
   }
   
-  @MainActor func stream() {
-    $numbers.load { yield in
-      var numbers: [Int] = []
-      for await number in [1, 2, 3, 4, 5].publisher.values {
-        try await Task.sleep(for: .seconds(1))
-        numbers.append(number)
-        yield(.loaded(numbers))
+  @MainActor func loadWithTimeout() {
+    showLoadingDelay = false
+    // Show "delay" info after 1 second, and time out after 2 seconds
+    $numbers.load(interrupts: [.seconds(2), .seconds(3)]) {
+      try await Task.sleep(for: .seconds(10))
+      return [1, 2, 3, 4, 5]
+    } onInterrupt: { accumulatedDelay in
+      switch accumulatedDelay {
+      case .seconds(5): // Accumulated 3 seconds at this point
+        showLoadingDelay = false
+        throw TimeoutError()
+      default:
+        showLoadingDelay = true
       }
     }
   }
@@ -101,7 +125,7 @@ struct BasicLoadableDemo: View {
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      BasicLoadableDemo().preferredColorScheme(.dark)
+      LoadableInterruptsDemo().preferredColorScheme(.dark)
     }
   }
 }

@@ -28,14 +28,14 @@ struct RefreshableLoadableInClassDemo: View {
 
     @Published var numbers: LoadableState<[Int]> = .absent
 
-    @MainActor func loadNumbers() {
+    func loadNumbers() {
       load(\.numbers) { [weak self] in
         guard let self else { throw CancelProcess() }
         return try await fetchNumbers()
       }
     }
 
-    @MainActor func refreshNumbers() async {
+    func refreshNumbers() async {
       await load(\.numbers, silently: true) { [weak self] in
         guard let self else { throw CancelProcess() }
         let numbers = try await fetchNumbers()
@@ -44,7 +44,7 @@ struct RefreshableLoadableInClassDemo: View {
     }
 
     // Demo extraction of the loading logic. This would typically be somewhere else
-    @MainActor func fetchNumbers() async throws -> [Int] {
+    func fetchNumbers() async throws -> [Int] {
         try await Task.sleep(for: .seconds(2))
         return [1, 2, 3, 4, 5]
     }
@@ -57,7 +57,7 @@ struct RefreshableLoadableInClassDemo: View {
       loadableState
     }
     .animation(.default, value: viewModel.numbers)
-    .navigationTitle("Refreshable Loadable")
+    .navigationTitle("Refreshable Loadable (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
     .onAppear {
       // On view appear, we load the numbers while showing a loading indicator
@@ -76,7 +76,7 @@ struct RefreshableLoadableInClassDemo: View {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
+      ProgressView().id(UUID())
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
     case .error:

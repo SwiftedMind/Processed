@@ -77,11 +77,21 @@ final class LoadableInClassTests: XCTestCase {
     XCTAssertEqual(container.loadableHistory, [.absent, .loading])
   }
 
-  @MainActor func testResetError() async throws {
+  @MainActor func testCancelError() async throws {
     let container = LoadableContainer<Int>()
 
     await container.load(\.loadable) {
       throw CancelLoadable()
+    }
+
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading])
+  }
+  
+  @MainActor func testResetError() async throws {
+    let container = LoadableContainer<Int>()
+
+    await container.load(\.loadable) {
+      throw ResetLoadable()
     }
 
     XCTAssertEqual(container.loadableHistory, [.absent, .loading, .absent])

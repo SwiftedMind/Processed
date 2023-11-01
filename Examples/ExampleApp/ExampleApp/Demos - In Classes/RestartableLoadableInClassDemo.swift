@@ -87,7 +87,7 @@ struct RestartableLoadableInClassDemo: View {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
+      ProgressView().id(UUID())
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
     case .error:

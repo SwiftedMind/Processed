@@ -484,7 +484,9 @@ extension ProcessSupport {
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore
     } catch is CancelProcess {
-      self[keyPath: processState] = .idle
+      cancel(processState)
+    } catch is ResetProcess {
+      reset(processState)
     } catch {
       self[keyPath: processState] = .failed(process: process, error: error)
     }
@@ -513,10 +515,19 @@ extension ProcessSupport {
             accumulatedDelay += delay
             try await onInterrupt(accumulatedDelay)
           }
+
+          // When all interruptions are processed, throw a special error
+          throw InterruptionsDoneError()
         }
         
-        try await group.next()
-        group.cancelAll()
+        do {
+          try await group.next()
+          // Here, the block() Task has finished, so we can cancel the interruptions
+          group.cancelAll()
+        } catch is InterruptionsDoneError {
+          // In this case, the interruptions are processed and we can wair for the block() Task to finish
+          try await group.next()
+        }
       }
     } catch is CancellationError {
       // Task was cancelled. Don't change the state anymore

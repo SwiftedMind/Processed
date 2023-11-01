@@ -19,6 +19,7 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 import Foundation
 
 /// An error indicating that the loadable process has been cancelled.
@@ -44,4 +45,10 @@ public struct ResetProcess: Error, Sendable, Hashable {
 /// An error indicating that a task has timed out.
 public struct TimeoutError: Error, Sendable, Hashable {
   public init() {}
+}
+
+// MARK: - Internal
+
+struct InterruptionsDoneError: Error, Sendable, Hashable {
+  init() {}
 }

@@ -67,13 +67,24 @@ final class ProcessInClassTests: XCTestCase {
 
     XCTAssertEqual(container.processHistory, [.idle, .running(process)])
   }
+  
+  @MainActor func testCancelError() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+
+    await container.run(\.process, as: process) {
+      throw CancelProcess()
+    }
+
+    XCTAssertEqual(container.processHistory, [.idle, .running(process)])
+  }
 
   @MainActor func testResetError() async throws {
     let container = ProcessContainer<SingleProcess>()
     let process = SingleProcess(id: "1")
 
     await container.run(\.process, as: process) {
-      throw CancelProcess()
+      throw ResetProcess()
     }
 
     XCTAssertEqual(container.processHistory, [.idle, .running(process), .idle])

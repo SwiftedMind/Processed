@@ -24,10 +24,6 @@ import SwiftUI
 import Processed
 
 struct BasicLoadableInClassDemo: View {
-  enum ProcessKind: String, Equatable {
-    case save = "Save"
-    case delete = "Delete"
-  }
 
   @MainActor final class ViewModel: ObservableObject, LoadableSupport {
 
@@ -102,7 +98,7 @@ struct BasicLoadableInClassDemo: View {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
+      ProgressView().id(UUID())
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
     case .error(let error):

@@ -33,7 +33,7 @@ struct DemoView: View {
       case .absent: 
         EmptyView()
       case .loading: 
-        ProgressView()
+        ProgressView().id(UUID())
       case .error(let error): 
         Text("\(error.localizedDescription)")
       case .loaded(let numbers):

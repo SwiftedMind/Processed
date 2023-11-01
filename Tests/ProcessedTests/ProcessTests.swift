@@ -72,7 +72,7 @@ final class ProcessTests: XCTestCase {
     XCTAssertEqual(container.processHistory, [.idle, .running(process)])
   }
   
-  @MainActor func testResetError() async throws {
+  @MainActor func testCancelError() async throws {
     let container = ProcessContainer<SingleProcess>()
     let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
     let process = SingleProcess(id: "1")
@@ -82,6 +82,18 @@ final class ProcessTests: XCTestCase {
     }
     
     XCTAssertEqual(container.processHistory, [.idle, .running(process)])
+  }
+  
+  @MainActor func testResetError() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let binding = Process.Binding(state: container.processBinding, task: container.taskBinding)
+    let process = SingleProcess(id: "1")
+    
+    await binding.run(process) {
+      throw ResetProcess()
+    }
+    
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .idle])
   }
   
   @MainActor func testErrorStates() async throws {

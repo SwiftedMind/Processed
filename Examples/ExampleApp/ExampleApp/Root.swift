@@ -81,11 +81,11 @@ struct Root: View {
         case .refreshable:
           RefreshableLoadableDemo()
         case .interrupts:
-          EmptyView()
+          LoadableInterruptsDemo()
         case .basicInClass:
           BasicLoadableInClassDemo()
         case .interruptsInClass:
-          EmptyView()
+          LoadableInterruptsInClassDemo()
         case .restartableInClass:
           RestartableLoadableInClassDemo()
         case .refreshableInClass:
