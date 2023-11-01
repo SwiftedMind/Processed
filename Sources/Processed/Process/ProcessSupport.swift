@@ -106,6 +106,29 @@ public protocol ProcessSupport: AnyObject {
     block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never>
   
+  /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
+  /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+  /// This method also allows for handling interruptions at specified durations.
+  ///
+  /// At the start of this method, any previously created tasks managed by this type will be cancelled
+  /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+  ///
+  /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+  /// while a returned value will cause a final `.finished` state to be set.
+  ///
+  /// - Parameters:
+  ///   - processState: The key path to the ``Processed/ProcessState``.
+  ///   - process: The process to run.
+  ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+  ///   - priority: The priority of the task. Defaults to `nil`.
+  ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+  ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+  ///   to be called 1 second as well as 3 seconds after the process has started.
+  ///   - block: The asynchronous block of code to execute.
+  ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+  ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+  ///
+  /// - Returns: The task representing the process execution.
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
   @MainActor @discardableResult func run<ProcessID: Equatable>(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
@@ -140,6 +163,28 @@ public protocol ProcessSupport: AnyObject {
     block: @MainActor @escaping () async throws -> Void
   ) async
   
+  /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
+  /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+  /// This method also allows for handling interruptions at specified durations.
+  ///
+  /// This method does not create its own `Task`, so you must `await` its completion.
+  ///
+  /// At the start of this method, any previously created tasks managed by this type will be cancelled
+  /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+  ///
+  /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+  /// while a returned value will cause a final `.finished` state to be set.
+  ///
+  /// - Parameters:
+  ///   - processState: The key path to the ``Processed/ProcessState``.
+  ///   - process: The process to run.
+  ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+  ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+  ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+  ///   to be called 1 second as well as 3 seconds after the process has started.
+  ///   - block: The asynchronous block of code to execute.
+  ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+  ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
   @MainActor func run<ProcessID: Equatable>(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
@@ -174,6 +219,29 @@ public protocol ProcessSupport: AnyObject {
     block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never>
   
+  /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
+  /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+  /// This method also allows for handling interruptions at specified durations.
+  ///
+  /// At the start of this method, any previously created tasks managed by this type will be cancelled
+  /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+  ///
+  /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+  /// while a returned value will cause a final `.finished` state to be set.
+  ///
+  /// - Parameters:
+  ///   - processState: The key path to the ``Processed/ProcessState``.
+  ///   - process: The process to run.
+  ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+  ///   - priority: The priority of the task. Defaults to `nil`.
+  ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+  ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+  ///   to be called 1 second as well as 3 seconds after the process has started.
+  ///   - block: The asynchronous block of code to execute.
+  ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+  ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+  ///
+  /// - Returns: The task representing the process execution.
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
   @MainActor @discardableResult func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
@@ -205,6 +273,27 @@ public protocol ProcessSupport: AnyObject {
     block: @MainActor @escaping () async throws -> Void
   ) async
   
+  /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
+  /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+  /// This method also allows for handling interruptions at specified durations.
+  ///
+  /// This method does not create its own `Task`, so you must `await` its completion.
+  ///
+  /// At the start of this method, any previously created tasks managed by this type will be cancelled
+  /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+  ///
+  /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+  /// while a returned value will cause a final `.finished` state to be set.
+  ///
+  /// - Parameters:
+  ///   - processState: The key path to the ``Processed/ProcessState``.
+  ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+  ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+  ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+  ///   to be called 1 second as well as 3 seconds after the process has started.
+  ///   - block: The asynchronous block of code to execute.
+  ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+  ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
   @MainActor func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
