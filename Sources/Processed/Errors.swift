@@ -21,8 +21,13 @@
 //
 import Foundation
 
-/// An error indicating that the process has been cancelled.
+/// An error indicating that the loadable process has been cancelled.
 public struct CancelLoadable: Error, Sendable, Hashable {
+  public init() {}
+}
+
+/// An error indicating that the loadable process has been marked to be reset.
+public struct ResetLoadable: Error, Sendable, Hashable {
   public init() {}
 }
 
