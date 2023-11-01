@@ -216,7 +216,7 @@ extension Process {
       cancel()
     }
 
-    private func setLoadingStateIfNeeded(runSilently: Bool, process: ProcessID) {
+    private func setRunningStateIfNeeded(runSilently: Bool, process: ProcessID) {
       if !runSilently {
         if case .running(let runningProcess) = state, runningProcess == process {} else {
           state = .running(process)
@@ -253,7 +253,7 @@ extension Process {
       block: @MainActor @escaping () async throws -> Void
     ) -> Task<Void, Never> {
       cancel()
-      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
+      setRunningStateIfNeeded(runSilently: runSilently, process: process)
       let task = Task(priority: priority) {
         await runTaskBody(process: process, runSilently: runSilently, block: block)
       }
@@ -261,33 +261,51 @@ extension Process {
       return task
     }
     
-    @available(iOS 16.0, *)
+    /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Process/Binding/cancel()``
+    ///  or ``Processed/Process/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Process/Binding/run(silently:block:)-5h20w`` from within a `.task` view modifier.
+    ///
+    /// - Parameters:
+    ///   - process: The process to run.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - priority: The priority of the task. Defaults to `nil`.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - block: The asynchronous block of code to execute.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    ///
+    /// - Returns: The task representing the process execution.
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
     @MainActor @discardableResult public func run(
       _ process: ProcessID,
       silently runSilently: Bool = false,
       interrupts: [Duration],
       priority: TaskPriority? = nil,
       block: @MainActor @escaping () async throws -> Void,
-      onInterrupt: @MainActor @escaping (_ delay: Duration) -> Void
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
     ) -> Task<Void, Never> {
       cancel()
-      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
+      setRunningStateIfNeeded(runSilently: runSilently, process: process)
       let task = Task(priority: priority) {
-        await withTaskGroup(of: Void.self) { group in
-          group.addTask {
-            await runTaskBody(process: process, runSilently: runSilently, block: block)
-          }
-          
-          // Add interrupt callbacks
-          for delay in interrupts {
-            _ = group.addTaskUnlessCancelled {
-              do {
-                try await Task.sleep(for: delay)
-                await onInterrupt(delay)
-              } catch {}
-            }
-          }
-        }
+        await runTaskBody(
+          process: process,
+          runSilently: runSilently,
+          interrupts: interrupts,
+          block: block,
+          onInterrupt: onInterrupt
+        )
       }
       self.task = task
       return task
@@ -306,7 +324,8 @@ extension Process {
     ///
     /// - Parameters:
     ///   - process: The process to run.
-    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either
+    ///   `.finished` or `.failed`, depending on the outcome of the `block` closure.
     ///   - block: The asynchronous block of code to execute.
     @MainActor public func run(
       _ process: ProcessID,
@@ -314,8 +333,47 @@ extension Process {
       block: @MainActor @escaping () async throws -> Void
     ) async {
       cancel()
-      setLoadingStateIfNeeded(runSilently: runSilently, process: process)
+      setRunningStateIfNeeded(runSilently: runSilently, process: process)
       await runTaskBody(process: process, runSilently: runSilently, block: block)
+    }
+    
+    /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Parameters:
+    ///   - process: The process to run.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped, and the process will directly go to either `.finished` or `.failed`,
+    ///   depending on the outcome of the `block` closure.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - block: The asynchronous block of code to execute.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor public func run(
+      _ process: ProcessID,
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      block: @MainActor @escaping () async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) async {
+      cancel()
+      setRunningStateIfNeeded(runSilently: runSilently, process: process)
+      await runTaskBody(
+        process: process,
+        runSilently: runSilently,
+        interrupts: interrupts,
+        block: block,
+        onInterrupt: onInterrupt
+      )
     }
     
     /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
@@ -345,6 +403,50 @@ extension Process {
       run(.init(), silently: runSilently, block: block)
     }
     
+    /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Process/Binding/cancel()``
+    ///  or ``Processed/Process/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Process/Binding/run(_:silently:block:)`` from within a `.task` view modifier.
+    ///
+    /// - Parameters:
+    ///   - process: The process to run.
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - priority: The priority of the task. Defaults to `nil`.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - block: The asynchronous block of code to execute.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    ///
+    /// - Returns: The task representing the process execution.
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor @discardableResult public func run(
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      priority: TaskPriority? = nil,
+      block: @MainActor @escaping () async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) -> Task<Void, Never> where ProcessID == SingleProcess {
+      run(
+        .init(),
+        silently: runSilently,
+        interrupts: interrupts,
+        priority: priority,
+        block: block,
+        onInterrupt: onInterrupt
+      )
+    }
+    
     /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
     /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
     ///
@@ -366,6 +468,37 @@ extension Process {
       await run(.init(), silently: runSilently, block: block)
     }
     
+    /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.running`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.failed` state to be set,
+    /// while a returned value will cause a final `.finished` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either
+    ///   `.finished` or `.failed`, depending on the outcome of the `block` closure.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - block: The asynchronous block of code to execute.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor public func run(
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      block: @MainActor @escaping () async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) async where ProcessID == SingleProcess {
+      await run(.init(), silently: runSilently, interrupts: interrupts, block: block, onInterrupt: onInterrupt)
+    }
+    
     // MARK: - Internal
     
     @MainActor private func runTaskBody(
@@ -380,6 +513,8 @@ extension Process {
         // Task was cancelled. Don't change the state anymore
       } catch is CancelProcess {
         cancel()
+      } catch is ResetProcess {
+        reset()
       } catch {
         state = .failed(process: process, error: error)
       }
@@ -391,27 +526,27 @@ extension Process {
       runSilently: Bool,
       interrupts: [Duration],
       block: @MainActor @escaping () async throws -> Void,
-      onInterrupt: @MainActor @escaping (_ delay: Duration) -> Void
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
     ) async {
       do {
         try await withThrowingTaskGroup(of: Void.self) { group in
           group.addTask {
-            await runTaskBody(process: process, runSilently: runSilently, block: block)
+            try await block()
+            state = .finished(process)
           }
           
-          // Add interrupt callbacks
-          for delay in interrupts {
-            _ = group.addTaskUnlessCancelled {
+          group.addTask {
+            var accumulatedDelay: Duration = .zero
+            for delay in interrupts {
               try await Task.sleep(for: delay)
-              await onInterrupt(delay)
+              accumulatedDelay += delay
+              try await onInterrupt(accumulatedDelay)
             }
           }
           
-          try await group.waitForAll()
+          try await group.next()
+          group.cancelAll()
         }
-        
-        try await block()
-        state = .finished(process)
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
       } catch is CancelProcess {

@@ -103,7 +103,18 @@ public protocol ProcessSupport: AnyObject {
     as process: ProcessID,
     silently runSilently: Bool,
     priority: TaskPriority?,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
+  ) -> Task<Void, Never>
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult func run<ProcessID: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+    as process: ProcessID,
+    silently runSilently: Bool,
+    interrupts: [Duration],
+    priority: TaskPriority?,
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never>
 
   /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
@@ -126,7 +137,17 @@ public protocol ProcessSupport: AnyObject {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     as process: ProcessID,
     silently runSilently: Bool,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
+  ) async
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func run<ProcessID: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+    as process: ProcessID,
+    silently runSilently: Bool,
+    interrupts: [Duration],
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async
   
   /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
@@ -150,9 +171,19 @@ public protocol ProcessSupport: AnyObject {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never>
-
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult func run(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+    silently runSilently: Bool,
+    interrupts: [Duration],
+    priority: TaskPriority?,
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) -> Task<Void, Never>
+  
   /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
   /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
   ///
@@ -171,9 +202,20 @@ public protocol ProcessSupport: AnyObject {
   @MainActor func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
+  ) async
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func run(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+    silently runSilently: Bool,
+    interrupts: [Duration],
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async
 }
+
+// MARK: - Implementation
 
 extension ProcessSupport {
   
@@ -199,14 +241,47 @@ extension ProcessSupport {
     as process: ProcessID,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: processState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
     setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
     TaskStore.shared.tasks[identifier] = Task(priority: priority) {
       defer { TaskStore.shared.tasks[identifier] = nil }
-      await runTaskBody(processState, process: process, silently: runSilently, block: block)
+      await runTaskBody(
+        processState,
+        process: process,
+        silently: runSilently,
+        block: block
+      )
+    }
+
+    return TaskStore.shared.tasks[identifier]!
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult public func run<ProcessID: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+    as process: ProcessID,
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    priority: TaskPriority? = nil,
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) -> Task<Void, Never> {
+    let identifier = TaskStore.shared.identifier(for: processState, in: self)
+    TaskStore.shared.tasks[identifier]?.cancel()
+    setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
+    TaskStore.shared.tasks[identifier] = Task(priority: priority) {
+      defer { TaskStore.shared.tasks[identifier] = nil }
+      await runTaskBody(
+        processState,
+        process: process,
+        silently: runSilently,
+        interrupts: interrupts,
+        block: block,
+        onInterrupt: onInterrupt
+      )
     }
 
     return TaskStore.shared.tasks[identifier]!
@@ -216,45 +291,103 @@ extension ProcessSupport {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     as process: ProcessID,
     silently runSilently: Bool = false,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
   ) async {
     setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
     await runTaskBody(processState, process: process, silently: runSilently, block: block)
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor public func run<ProcessID: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+    as process: ProcessID,
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) async {
+    setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
+    await runTaskBody(
+      processState,
+      process: process,
+      silently: runSilently,
+      interrupts: interrupts,
+      block: block,
+      onInterrupt: onInterrupt
+    )
   }
   
   @MainActor @discardableResult public func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never> {
-    let process = SingleProcess()
-    let identifier = TaskStore.shared.identifier(for: processState, in: self)
-    TaskStore.shared.tasks[identifier]?.cancel()
-    setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
-    TaskStore.shared.tasks[identifier] = Task(priority: priority) {
-      defer { TaskStore.shared.tasks[identifier] = nil }
-      await runTaskBody(processState, process: process, silently: runSilently, block: block)
-    }
-
-    return TaskStore.shared.tasks[identifier]!
+    run(
+      processState,
+      as: .init(),
+      silently: runSilently,
+      priority: priority,
+      block: block
+    )
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult public func run(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    priority: TaskPriority? = nil,
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) -> Task<Void, Never> {
+    run(
+      processState,
+      as: .init(),
+      silently: runSilently,
+      interrupts: interrupts,
+      priority: priority,
+      block: block,
+      onInterrupt: onInterrupt
+    )
   }
   
   @MainActor public func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool = false,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
   ) async {
-    let process = SingleProcess()
-    setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
-    await runTaskBody(processState, process: process, silently: runSilently, block: block)
+    await run(
+      processState,
+      as: .init(),
+      silently: runSilently,
+      block: block
+    )
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor public func run(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) async {
+    await run(
+      processState,
+      as: .init(),
+      silently: runSilently,
+      interrupts: interrupts,
+      block: block,
+      onInterrupt: onInterrupt
+    )
   }
 
   @MainActor private func runTaskBody<ProcessID: Equatable>(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     process: ProcessID,
     silently runSilently: Bool = false,
-    block: @escaping () async throws -> Void
+    block: @MainActor @escaping () async throws -> Void
   ) async {
     do {
       try await block()
@@ -263,6 +396,45 @@ extension ProcessSupport {
       // Task was cancelled. Don't change the state anymore
     } catch is CancelProcess {
       self[keyPath: processState] = .idle
+    } catch {
+      self[keyPath: processState] = .failed(process: process, error: error)
+    }
+  }
+
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor private func runTaskBody<ProcessID: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
+    process: ProcessID,
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    block: @MainActor @escaping () async throws -> Void,
+    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) async {
+    do {
+      try await withThrowingTaskGroup(of: Void.self) { group in
+        group.addTask {
+          try await block()
+          self[keyPath: processState] = .finished(process)
+        }
+        
+        group.addTask {
+          var accumulatedDelay: Duration = .zero
+          for delay in interrupts {
+            try await Task.sleep(for: delay)
+            accumulatedDelay += delay
+            try await onInterrupt(accumulatedDelay)
+          }
+        }
+        
+        try await group.next()
+        group.cancelAll()
+      }
+    } catch is CancellationError {
+      // Task was cancelled. Don't change the state anymore
+    } catch is CancelProcess {
+      cancel(processState)
+    } catch is ResetProcess {
+      reset(processState)
     } catch {
       self[keyPath: processState] = .failed(process: process, error: error)
     }

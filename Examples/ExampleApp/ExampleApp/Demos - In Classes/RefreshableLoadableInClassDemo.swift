@@ -23,41 +23,56 @@
 import SwiftUI
 import Processed
 
-struct RestartableDemo: View {
+struct RefreshableLoadableInClassDemo: View {
+  @MainActor final class ViewModel: ObservableObject, LoadableSupport {
 
-  // An id that can be used to restart the task that runs the continuous observation
-  @State var numbersObservationId: UUID = .init()
-  @State var shouldFail: Bool = false
-  @Loadable var numbers: LoadableState<[Int]>
+    @Published var numbers: LoadableState<[Int]> = .absent
 
-  var body: some View {
-    List {
-      buttons
-      loadableState
+    @MainActor func loadNumbers() {
+      load(\.numbers) { [weak self] in
+        guard let self else { throw CancelProcess() }
+        return try await fetchNumbers()
+      }
     }
-    .animation(.default, value: numbers)
-    .navigationTitle("Restartable Demo")
-    .navigationBarTitleDisplayMode(.inline)
-    .task(id: numbersObservationId) {
-      // This task will cancel when the view disappears and restart if numbersObservationId changes
-      await stream()
+
+    @MainActor func refreshNumbers() async {
+      await load(\.numbers, silently: true) { [weak self] in
+        guard let self else { throw CancelProcess() }
+        let numbers = try await fetchNumbers()
+        return numbers.shuffled() // Shuffle them to show that they changed
+      }
+    }
+
+    // Demo extraction of the loading logic. This would typically be somewhere else
+    @MainActor func fetchNumbers() async throws -> [Int] {
+        try await Task.sleep(for: .seconds(2))
+        return [1, 2, 3, 4, 5]
     }
   }
 
-  @ViewBuilder @MainActor
-  private var buttons: some View {
-    Section {
-      Button("Simulate stream error", role: .cancel) {
-        shouldFail = true
-      }
-    } footer: {
-      Text("Tap here to interrupt the loading stream and simulate an error case so you can test a restart")
+  @StateObject var viewModel = ViewModel()
+
+  var body: some View {
+    List {
+      loadableState
+    }
+    .animation(.default, value: viewModel.numbers)
+    .navigationTitle("Refreshable Loadable")
+    .navigationBarTitleDisplayMode(.inline)
+    .onAppear {
+      // On view appear, we load the numbers while showing a loading indicator
+      viewModel.loadNumbers()
+    }
+    .refreshable {
+      // On a refresh, we skip the loading indicator so the current ".loaded" or ".error" state is kept until
+      // we override it with a new ".loaded" or ".error" state
+      await viewModel.refreshNumbers()
     }
   }
 
   @ViewBuilder @MainActor
   private var loadableState: some View {
-    switch numbers {
+    switch viewModel.numbers {
     case .absent:
       EmptyView()
     case .loading:
@@ -65,36 +80,15 @@ struct RestartableDemo: View {
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
     case .error:
-      VStack {
-        Text("An error occurred")
-        Button("Retry") {
-          // Restart the stream
-          numbersObservationId = .init()
-        }
-        .buttonStyle(.borderedProminent)
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical)
+      Text("An error occurred")
     case .loaded(let numbers):
-      ForEach(numbers, id: \.self) { number in
-        Text(String(number))
+      Section {
+        Text("Pull down to refresh the numbers")
       }
-    }
-  }
-
-  @MainActor func stream() async {
-    await $numbers.load { yield in
-      var numbers: [Int] = []
-      for await number in (1...100).publisher.values {
-        try await Task.sleep(for: .seconds(1))
-
-        if shouldFail {
-          shouldFail = false // Reset
-          throw NSError(domain: "", code: 42)
+      Section {
+        ForEach(numbers, id: \.self) { number in
+          Text(String(number))
         }
-
-        numbers.append(number)
-        yield(.loaded(numbers))
       }
     }
   }
@@ -103,7 +97,7 @@ struct RestartableDemo: View {
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      RestartableDemo().preferredColorScheme(.dark)
+      RefreshableLoadableInClassDemo().preferredColorScheme(.dark)
     }
   }
 }

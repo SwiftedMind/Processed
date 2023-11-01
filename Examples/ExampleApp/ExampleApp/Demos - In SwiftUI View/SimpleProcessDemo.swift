@@ -23,85 +23,85 @@
 import SwiftUI
 import Processed
 
-struct LoadableDemo: View {
-  
-  @Loadable var numbers: LoadableState<[Int]>
-  
+struct SimpleProcessDemo: View {
+
+  @Process var process
+
   var body: some View {
     List {
       buttons
-      loadableState
+      processState
     }
-    .animation(.default, value: numbers)
-    .navigationTitle("Loadable Demo")
+    .animation(.default, value: process)
+    .navigationTitle("Simple Process")
     .navigationBarTitleDisplayMode(.inline)
   }
-  
+
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Load All Numbers") {
-        load()
+      Button("Run process with success") {
+        runSuccess()
       }
-      Button("Stream Numbers") {
-        stream()
+      .disabled(process.isRunning)
+      Button("Run process with error") {
+        runError()
       }
+      .disabled(process.isRunning)
     }
-    
+
     Section {
       Button("Cancel") {
-        // Cancel the current loading process and keep the state where it currently is
+        // Cancel the current process and keep the state where it currently is
         // so that you can start a new process without introducing data races
-        $numbers.cancel()
+        $process.cancel()
       }
       Button("Reset") {
-        // Cancel the current loading process and reset the state to .absent
-        $numbers.reset()
+        // Cancel the current process and reset the state to .idle
+        $process.reset()
       }
     }
   }
-  
+
   @ViewBuilder @MainActor
-  private var loadableState: some View {
-    switch numbers {
-    case .absent:
-      EmptyView()
-    case .loading:
-      ProgressView()
-        .frame(maxWidth: .infinity)
-        .listRowBackground(Color.clear)
-    case .error(let error):
-      Text("An error occurred: \(error.localizedDescription)")
-    case .loaded(let numbers):
-      ForEach(numbers, id: \.self) { number in
-        Text(String(number))
+  private var processState: some View {
+    Section {
+      switch process {
+      case .idle:
+        Text("Idle")
+      case .running:
+        HStack {
+          Text("Running")
+          Spacer()
+          ProgressView()
+        }
+      case .failed(_, let error):
+        Text("An error occurred: \(error.localizedDescription)")
+          .foregroundStyle(.red)
+      case .finished:
+        Text("Success!")
       }
+    } header: {
+      Text("Process state")
     }
   }
-  
-  @MainActor func load() {
-    $numbers.load {
+
+  @MainActor func runSuccess() {
+    $process.run {
       try await Task.sleep(for: .seconds(2))
-      return [1, 2, 3, 4, 5]
     }
   }
-  
-  @MainActor func stream() {
-    $numbers.load { yield in
-      var numbers: [Int] = []
-      for await number in [1, 2, 3, 4, 5].publisher.values {
-        try await Task.sleep(for: .seconds(1))
-        numbers.append(number)
-        yield(.loaded(numbers))
-      }
+
+  @MainActor func runError() {
+    $process.run {
+      try await Task.sleep(for: .seconds(2))
+      throw NSError(domain: "Something went wrong", code: 500)
     }
   }
 }
 
 #Preview {
-  MainActor.assumeIsolated {
-    NavigationStack {
-      LoadableDemo().preferredColorScheme(.dark)
-    }
+  NavigationStack {
+    SimpleProcessDemo().preferredColorScheme(.dark)
   }
 }

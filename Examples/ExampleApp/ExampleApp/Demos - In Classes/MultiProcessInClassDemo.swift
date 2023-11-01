@@ -23,10 +23,16 @@
 import SwiftUI
 import Processed
 
-struct SingleProcessInClassDemo: View {
+struct SharedProcessInClassDemo: View {
+  
+  enum ProcessKind: String, Equatable {
+    case save = "Save"
+    case delete = "Delete"
+  }
 
   @MainActor final class ViewModel: ObservableObject, ProcessSupport {
-    @Published var process: ProcessState<SingleProcess> = .idle
+
+    @Published var process: ProcessState<ProcessKind> = .idle
 
     func cancelProcess() {
       cancel(\.process)
@@ -36,16 +42,15 @@ struct SingleProcessInClassDemo: View {
       reset(\.process)
     }
 
-    func runSuccess() {
-      run(\.process) {
+    func save() {
+      run(\.process, as: .save) {
         try await Task.sleep(for: .seconds(2))
       }
     }
 
-    func runError() {
-      run(\.process) {
+    func delete() {
+      run(\.process, as: .delete) {
         try await Task.sleep(for: .seconds(2))
-        throw NSError(domain: "Something went wrong", code: 500)
       }
     }
   }
@@ -58,20 +63,24 @@ struct SingleProcessInClassDemo: View {
       processState
     }
     .animation(.default, value: viewModel.process)
-    .navigationTitle("Single Process Demo (VM)")
+    .navigationTitle("Shared Process (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
   }
 
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Run process with success") {
-        viewModel.runSuccess()
+      Button("Save") {
+        viewModel.save()
       }
+      .withLoadingIndicator()
+      .loading(viewModel.process.isRunning(.save))
       .disabled(viewModel.process.isRunning)
-      Button("Run process with error") {
-        viewModel.runError()
+      Button("Delete", role: .destructive) {
+        viewModel.delete()
       }
+      .withLoadingIndicator()
+      .loading(viewModel.process.isRunning(.delete))
       .disabled(viewModel.process.isRunning)
     }
 
@@ -94,17 +103,17 @@ struct SingleProcessInClassDemo: View {
       switch viewModel.process {
       case .idle:
         Text("Idle")
-      case .running:
+      case .running(let process):
         HStack {
-          Text("Running")
+          Text("Running \(process.rawValue)")
           Spacer()
           ProgressView()
         }
-      case .failed(_, let error):
-        Text("An error occurred: \(error.localizedDescription)")
+      case .failed(let process, let error):
+        Text("An error occurred during \(process.rawValue): \(error.localizedDescription)")
           .foregroundStyle(.red)
-      case .finished:
-        Text("Success!")
+      case .finished(let process):
+        Text("Finished \(process.rawValue)")
       }
     } header: {
       Text("Process state")
@@ -114,6 +123,6 @@ struct SingleProcessInClassDemo: View {
 
 #Preview {
   NavigationStack {
-    SingleProcessInClassDemo().preferredColorScheme(.dark)
+    SharedProcessInClassDemo().preferredColorScheme(.dark)
   }
 }

@@ -38,7 +38,7 @@ struct SharedProcessDemo: View {
       processState
     }
     .animation(.default, value: process)
-    .navigationTitle("Shared Process Demo")
+    .navigationTitle("Shared Process")
     .navigationBarTitleDisplayMode(.inline)
   }
 

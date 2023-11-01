@@ -23,27 +23,44 @@
 import SwiftUI
 import Processed
 
-struct RefreshableDemo: View {
+struct BasicLoadableDemo: View {
+  
   @Loadable var numbers: LoadableState<[Int]>
-
+  
   var body: some View {
     List {
+      buttons
       loadableState
     }
     .animation(.default, value: numbers)
-    .navigationTitle("Refreshable Demo")
+    .navigationTitle("Basic Loadable")
     .navigationBarTitleDisplayMode(.inline)
-    .onAppear {
-      // On view appear, we load the numbers while showing a loading indicator
-      loadNumbers()
+  }
+  
+  @ViewBuilder @MainActor
+  private var buttons: some View {
+    Section {
+      Button("Load All Numbers") {
+        load()
+      }
+      Button("Stream Numbers") {
+        stream()
+      }
     }
-    .refreshable {
-      // On a refresh, we skip the loading indicator so the current ".loaded" or ".error" state is kept until
-      // we override it with a new ".loaded" or ".error" state
-      await refreshNumbers()
+    
+    Section {
+      Button("Cancel") {
+        // Cancel the current loading process and keep the state where it currently is
+        // so that you can start a new process without introducing data races
+        $numbers.cancel()
+      }
+      Button("Reset") {
+        // Cancel the current loading process and reset the state to .absent
+        $numbers.reset()
+      }
     }
   }
-
+  
   @ViewBuilder @MainActor
   private var loadableState: some View {
     switch numbers {
@@ -53,42 +70,38 @@ struct RefreshableDemo: View {
       ProgressView()
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
-    case .error:
-      Text("An error occurred")
+    case .error(let error):
+      Text("An error occurred: \(error.localizedDescription)")
     case .loaded(let numbers):
-      Section {
-        Text("Pull down to refresh the numbers")
-      }
       ForEach(numbers, id: \.self) { number in
         Text(String(number))
       }
     }
   }
-
-  @MainActor func loadNumbers() {
+  
+  @MainActor func load() {
     $numbers.load {
-      try await fetchNumbers()
-    }
-  }
-
-  @MainActor func refreshNumbers() async {
-    await $numbers.load(silently: true) {
-      let numbers = try await fetchNumbers()
-      return numbers.shuffled() // Shuffle them to show that they changed
-    }
-  }
-
-  // Demo extraction of the loading logic. This would typically be somewhere else
-  @MainActor func fetchNumbers() async throws -> [Int] {
       try await Task.sleep(for: .seconds(2))
       return [1, 2, 3, 4, 5]
+    }
+  }
+  
+  @MainActor func stream() {
+    $numbers.load { yield in
+      var numbers: [Int] = []
+      for await number in [1, 2, 3, 4, 5].publisher.values {
+        try await Task.sleep(for: .seconds(1))
+        numbers.append(number)
+        yield(.loaded(numbers))
+      }
+    }
   }
 }
 
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      RefreshableDemo().preferredColorScheme(.dark)
+      BasicLoadableDemo().preferredColorScheme(.dark)
     }
   }
 }

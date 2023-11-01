@@ -23,16 +23,12 @@
 import SwiftUI
 import Processed
 
-struct SharedProcessInClassDemo: View {
-  
-  enum ProcessKind: String, Equatable {
-    case save = "Save"
-    case delete = "Delete"
-  }
+struct ProcessInterruptsInClassDemo: View {
 
   @MainActor final class ViewModel: ObservableObject, ProcessSupport {
-
-    @Published var process: ProcessState<ProcessKind> = .idle
+    
+    @Published var process: ProcessState<SingleProcess> = .idle
+    @Published var showLoadingDelay: Bool = false
 
     func cancelProcess() {
       cancel(\.process)
@@ -42,15 +38,27 @@ struct SharedProcessInClassDemo: View {
       reset(\.process)
     }
 
-    func save() {
-      run(\.process, as: .save) {
+    func runSuccess() {
+      run(\.process) {
         try await Task.sleep(for: .seconds(2))
       }
     }
 
-    func delete() {
-      run(\.process, as: .delete) {
-        try await Task.sleep(for: .seconds(2))
+    // TODO: Clean up `showLoadingDelay` on termination (#2)
+    func runTimeout() {
+      showLoadingDelay = false
+      // Show "delay" info after 1 second, and time out after 2 seconds
+      run(\.process, interrupts: [.seconds(2), .seconds(3)]) {
+        try await Task.sleep(for: .seconds(10))
+      } onInterrupt: { [weak self] accumulatedDelay in
+        guard let self else { return }
+        switch accumulatedDelay {
+        case .seconds(5): // Accumulated 3 seconds at this point
+          showLoadingDelay = false
+          throw TimeoutError()
+        default:
+          showLoadingDelay = true
+        }
       }
     }
   }
@@ -63,24 +71,21 @@ struct SharedProcessInClassDemo: View {
       processState
     }
     .animation(.default, value: viewModel.process)
-    .navigationTitle("Shared Process Demo (VM)")
+    .animation(.default, value: viewModel.showLoadingDelay)
+    .navigationTitle("Process Interrupts (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
   }
 
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Save") {
-        viewModel.save()
+      Button("Run process with success") {
+        viewModel.runSuccess()
       }
-      .withLoadingIndicator()
-      .loading(viewModel.process.isRunning(.save))
       .disabled(viewModel.process.isRunning)
-      Button("Delete", role: .destructive) {
-        viewModel.delete()
+      Button("Run process with timeout") {
+        viewModel.runTimeout()
       }
-      .withLoadingIndicator()
-      .loading(viewModel.process.isRunning(.delete))
       .disabled(viewModel.process.isRunning)
     }
 
@@ -103,26 +108,36 @@ struct SharedProcessInClassDemo: View {
       switch viewModel.process {
       case .idle:
         Text("Idle")
-      case .running(let process):
+      case .running:
         HStack {
-          Text("Running \(process.rawValue)")
+          Text("Running")
           Spacer()
           ProgressView()
         }
-      case .failed(let process, let error):
-        Text("An error occurred during \(process.rawValue): \(error.localizedDescription)")
-          .foregroundStyle(.red)
-      case .finished(let process):
-        Text("Finished \(process.rawValue)")
+      case .failed(_, let error):
+        switch error {
+        case is TimeoutError:
+          Text("Timeout")
+            .foregroundStyle(.red)
+        default:
+          Text("An error occurred: \(error.localizedDescription)")
+            .foregroundStyle(.red)
+        }
+      case .finished:
+        Text("Success!")
       }
     } header: {
       Text("Process state")
+    } footer: {
+      if viewModel.showLoadingDelay {
+        Text("The process seems to run longer than expected")
+      }
     }
   }
 }
 
 #Preview {
   NavigationStack {
-    SharedProcessInClassDemo().preferredColorScheme(.dark)
+    ProcessInterruptsInClassDemo().preferredColorScheme(.dark)
   }
 }

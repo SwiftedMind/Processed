@@ -23,39 +23,29 @@
 import SwiftUI
 import Processed
 
-struct LoadableInClassDemo: View {
-  enum ProcessKind: String, Equatable {
-    case save = "Save"
-    case delete = "Delete"
-  }
+struct SimpleProcessInClassDemo: View {
 
-  @MainActor final class ViewModel: ObservableObject, LoadableSupport {
+  @MainActor final class ViewModel: ObservableObject, ProcessSupport {
+    @Published var process: ProcessState<SingleProcess> = .idle
 
-    @Published var numbers: LoadableState<[Int]> = .absent
-
-    func cancelNumbers() {
-      cancel(\.numbers)
+    func cancelProcess() {
+      cancel(\.process)
     }
 
-    func resetNumbers() {
-      reset(\.numbers)
+    func resetProcess() {
+      reset(\.process)
     }
 
-    func load() {
-      load(\.numbers) {
+    func runSuccess() {
+      run(\.process) {
         try await Task.sleep(for: .seconds(2))
-        return [1, 2, 3, 4, 5]
       }
     }
 
-    func stream() {
-      load(\.numbers) { yield in
-        var numbers: [Int] = []
-        for await number in [1, 2, 3, 4, 5].publisher.values {
-          try await Task.sleep(for: .seconds(1))
-          numbers.append(number)
-          yield(.loaded(numbers))
-        }
+    func runError() {
+      run(\.process) {
+        try await Task.sleep(for: .seconds(2))
+        throw NSError(domain: "Something went wrong", code: 500)
       }
     }
   }
@@ -65,60 +55,65 @@ struct LoadableInClassDemo: View {
   var body: some View {
     List {
       buttons
-      loadableState
+      processState
     }
-    .animation(.default, value: viewModel.numbers)
-    .navigationTitle("Loadable Demo (VM)")
+    .animation(.default, value: viewModel.process)
+    .navigationTitle("Simple Process (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
   }
 
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Load All Numbers") {
-        viewModel.load()
+      Button("Run process with success") {
+        viewModel.runSuccess()
       }
-      Button("Stream Numbers") {
-        viewModel.stream()
+      .disabled(viewModel.process.isRunning)
+      Button("Run process with error") {
+        viewModel.runError()
       }
+      .disabled(viewModel.process.isRunning)
     }
 
     Section {
       Button("Cancel") {
-        // Cancel the current loading process and keep the state where it currently is
+        // Cancel the current process and keep the state where it currently is
         // so that you can start a new process without introducing data races
-        viewModel.cancelNumbers()
+        viewModel.cancelProcess()
       }
       Button("Reset") {
-        // Cancel the current loading process and reset the state to .absent
-        viewModel.resetNumbers()
+        // Cancel the current process and reset the state to .idle
+        viewModel.resetProcess()
       }
     }
   }
 
   @ViewBuilder @MainActor
-  private var loadableState: some View {
-    switch viewModel.numbers {
-    case .absent:
-      EmptyView()
-    case .loading:
-      ProgressView()
-        .frame(maxWidth: .infinity)
-        .listRowBackground(Color.clear)
-    case .error(let error):
-      Text("An error occurred: \(error.localizedDescription)")
-    case .loaded(let numbers):
-      ForEach(numbers, id: \.self) { number in
-        Text(String(number))
+  private var processState: some View {
+    Section {
+      switch viewModel.process {
+      case .idle:
+        Text("Idle")
+      case .running:
+        HStack {
+          Text("Running")
+          Spacer()
+          ProgressView()
+        }
+      case .failed(_, let error):
+        Text("An error occurred: \(error.localizedDescription)")
+          .foregroundStyle(.red)
+      case .finished:
+        Text("Success!")
       }
+    } header: {
+      Text("Process state")
     }
   }
 }
 
 #Preview {
-  MainActor.assumeIsolated {
-    NavigationStack {
-      LoadableInClassDemo().preferredColorScheme(.dark)
-    }
+  NavigationStack {
+    SimpleProcessInClassDemo().preferredColorScheme(.dark)
   }
 }
