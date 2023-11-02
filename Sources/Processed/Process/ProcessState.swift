@@ -42,6 +42,9 @@ public enum ProcessState<ProcessID> {
   case finished(ProcessID)
 }
 
+/// A convenience typealias for a `ProcessState` with the generic type of `SingleProcess`
+public typealias SingleProcessState = ProcessState<SingleProcess>
+
 extension ProcessState: CustomDebugStringConvertible {
   public var debugDescription: String {
     switch self {

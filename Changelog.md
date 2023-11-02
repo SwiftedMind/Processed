@@ -4,6 +4,7 @@
 - **Added** -  Added oncept of "interrupts" for both `@Loadable` and `@Process` (as well as their protocol counterparts); see more [here](TODO)
 - **Added** -  The examples app now has more examples; for example `Restartable Loadable` and `Refreshable Loadable`
 - **Added** -  `ResetProcess` and `ResetLoadable` error types that can be thrown to reset a process or loadable
+- **Added** - Added typealias `typealias SingleProcessState = ProcessState<SingleProcess>` for convenience
 - **Updated** - The closures passed to the `run` methods of the  `ProcessSupport` protocol are now isolated to the `MainActor`
 - **Improved** -  Reworked the examples app and fixed a few bugs and issues
 - **Improved** - Removed redundancies in the `ProcessSupport` protocol to simplify implementation
