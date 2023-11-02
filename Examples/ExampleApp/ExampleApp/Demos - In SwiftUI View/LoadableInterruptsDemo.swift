@@ -37,6 +37,9 @@ struct LoadableInterruptsDemo: View {
     .animation(.default, value: showLoadingDelay)
     .navigationTitle("Loadable Interrupts")
     .navigationBarTitleDisplayMode(.inline)
+    .onChange(of: numbers) {
+      showLoadingDelay = false
+    }
   }
   
   @ViewBuilder @MainActor
@@ -105,7 +108,6 @@ struct LoadableInterruptsDemo: View {
   }
   
   @MainActor func loadWithTimeout() {
-    showLoadingDelay = false
     // Show "delay" info after 1 second, and time out after 2 seconds
     $numbers.load(interrupts: [.seconds(2), .seconds(3)]) {
       try await Task.sleep(for: .seconds(10))
@@ -113,7 +115,6 @@ struct LoadableInterruptsDemo: View {
     } onInterrupt: { accumulatedDelay in
       switch accumulatedDelay {
       case .seconds(5): // Accumulated 3 seconds at this point
-        showLoadingDelay = false
         throw TimeoutError()
       default:
         showLoadingDelay = true

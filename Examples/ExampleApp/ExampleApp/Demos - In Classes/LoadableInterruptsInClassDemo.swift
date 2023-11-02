@@ -46,7 +46,6 @@ struct LoadableInterruptsInClassDemo: View {
     }
     
     func loadWithTimeout() {
-      showLoadingDelay = false
       // Show "delay" info after 1 second, and time out after 2 seconds
       load(\.numbers, interrupts: [.seconds(2), .seconds(3)]) {
         try await Task.sleep(for: .seconds(10))
@@ -55,7 +54,6 @@ struct LoadableInterruptsInClassDemo: View {
         guard let self else { return }
         switch accumulatedDelay {
         case .seconds(5): // Accumulated 3 seconds at this point
-          showLoadingDelay = false
           throw TimeoutError()
         default:
           showLoadingDelay = true
@@ -75,6 +73,9 @@ struct LoadableInterruptsInClassDemo: View {
     .animation(.default, value: viewModel.showLoadingDelay)
     .navigationTitle("Loadable Interrupts (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
+    .onChange(of: viewModel.numbers) {
+      viewModel.showLoadingDelay = false
+    }
   }
   
   @ViewBuilder @MainActor

@@ -37,6 +37,9 @@ struct ProcessInterruptsDemo: View {
     .animation(.default, value: showLoadingDelay)
     .navigationTitle("Process Interrupts")
     .navigationBarTitleDisplayMode(.inline)
+    .onChange(of: process) {
+      showLoadingDelay = false
+    }
   }
 
   @ViewBuilder @MainActor
@@ -105,14 +108,12 @@ struct ProcessInterruptsDemo: View {
   }
 
   @MainActor func runTimeout() {
-    showLoadingDelay = false
     // Show "delay" info after 1 second, and time out after 2 seconds
     $process.run(interrupts: [.seconds(2), .seconds(3)]) {
       try await Task.sleep(for: .seconds(10))
     } onInterrupt: { accumulatedDelay in
       switch accumulatedDelay {
       case .seconds(5): // Accumulated 3 seconds at this point
-        showLoadingDelay = false
         throw TimeoutError()
       default: 
         showLoadingDelay = true
