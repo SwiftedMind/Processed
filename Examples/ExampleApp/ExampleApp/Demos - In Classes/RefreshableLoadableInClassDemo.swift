@@ -29,15 +29,13 @@ struct RefreshableLoadableInClassDemo: View {
     @Published var numbers: LoadableState<[Int]> = .absent
 
     func loadNumbers() {
-      load(\.numbers) { [weak self] in
-        guard let self else { throw CancelProcess() }
+      load(\.numbers) {
         return try await fetchNumbers()
       }
     }
 
     func refreshNumbers() async {
-      await load(\.numbers, silently: true) { [weak self] in
-        guard let self else { throw CancelProcess() }
+      await load(\.numbers, silently: true) {
         let numbers = try await fetchNumbers()
         return numbers.shuffled() // Shuffle them to show that they changed
       }

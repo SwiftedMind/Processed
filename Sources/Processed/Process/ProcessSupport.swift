@@ -103,7 +103,7 @@ public protocol ProcessSupport: AnyObject {
     as process: ProcessID,
     silently runSilently: Bool,
     priority: TaskPriority?,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never>
   
   /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
@@ -136,8 +136,8 @@ public protocol ProcessSupport: AnyObject {
     silently runSilently: Bool,
     interrupts: [Duration],
     priority: TaskPriority?,
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never>
 
   /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
@@ -160,7 +160,7 @@ public protocol ProcessSupport: AnyObject {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     as process: ProcessID,
     silently runSilently: Bool,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async
   
   /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
@@ -191,8 +191,8 @@ public protocol ProcessSupport: AnyObject {
     as process: ProcessID,
     silently runSilently: Bool,
     interrupts: [Duration],
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async
   
   /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
@@ -216,7 +216,7 @@ public protocol ProcessSupport: AnyObject {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never>
   
   /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
@@ -248,8 +248,8 @@ public protocol ProcessSupport: AnyObject {
     silently runSilently: Bool,
     interrupts: [Duration],
     priority: TaskPriority?,
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never>
   
   /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
@@ -270,7 +270,7 @@ public protocol ProcessSupport: AnyObject {
   @MainActor func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async
   
   /// Starts a process in the current asynchronous context, waiting for a return value or thrown error from the
@@ -299,8 +299,8 @@ public protocol ProcessSupport: AnyObject {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool,
     interrupts: [Duration],
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async
 }
 
@@ -330,7 +330,7 @@ extension ProcessSupport {
     as process: ProcessID,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: processState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
@@ -355,8 +355,8 @@ extension ProcessSupport {
     silently runSilently: Bool = false,
     interrupts: [Duration],
     priority: TaskPriority? = nil,
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: processState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
@@ -380,7 +380,7 @@ extension ProcessSupport {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     as process: ProcessID,
     silently runSilently: Bool = false,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async {
     setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
     await runTaskBody(processState, process: process, silently: runSilently, block: block)
@@ -392,8 +392,8 @@ extension ProcessSupport {
     as process: ProcessID,
     silently runSilently: Bool = false,
     interrupts: [Duration],
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     setRunningStateIfNeeded(on: processState, process: process, runSilently: runSilently)
     await runTaskBody(
@@ -410,7 +410,7 @@ extension ProcessSupport {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) -> Task<Void, Never> {
     run(
       processState,
@@ -427,8 +427,8 @@ extension ProcessSupport {
     silently runSilently: Bool = false,
     interrupts: [Duration],
     priority: TaskPriority? = nil,
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never> {
     run(
       processState,
@@ -444,7 +444,7 @@ extension ProcessSupport {
   @MainActor public func run(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool = false,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async {
     await run(
       processState,
@@ -459,8 +459,8 @@ extension ProcessSupport {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<SingleProcess>>,
     silently runSilently: Bool = false,
     interrupts: [Duration],
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     await run(
       processState,
@@ -476,7 +476,7 @@ extension ProcessSupport {
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
     process: ProcessID,
     silently runSilently: Bool = false,
-    block: @MainActor @escaping () async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async {
     do {
       try await block()
@@ -498,8 +498,8 @@ extension ProcessSupport {
     process: ProcessID,
     silently runSilently: Bool = false,
     interrupts: [Duration],
-    block: @MainActor @escaping () async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     do {
       try await withThrowingTaskGroup(of: Void.self) { group in

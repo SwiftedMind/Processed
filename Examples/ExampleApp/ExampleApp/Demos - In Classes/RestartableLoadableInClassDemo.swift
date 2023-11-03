@@ -31,8 +31,7 @@ struct RestartableLoadableInClassDemo: View {
     @Published var numbers: LoadableState<[Int]> = .absent
     
     func stream() async {
-      await load(\.numbers) { [weak self] yield in
-        guard let self else { return }
+      await load(\.numbers) { yield in
         var numbers: [Int] = []
         for await number in (1...100).publisher.values {
           try await Task.sleep(for: .seconds(1))

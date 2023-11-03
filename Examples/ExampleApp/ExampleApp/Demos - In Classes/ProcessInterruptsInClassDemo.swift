@@ -48,8 +48,7 @@ struct ProcessInterruptsInClassDemo: View {
       // Show "delay" info after 1 second, and time out after 2 seconds
       run(\.process, interrupts: [.seconds(2), .seconds(3)]) {
         try await Task.sleep(for: .seconds(10))
-      } onInterrupt: { [weak self] accumulatedDelay in
-        guard let self else { return }
+      } onInterrupt: { accumulatedDelay in
         switch accumulatedDelay {
         case .seconds(5): // Accumulated 3 seconds at this point
           throw TimeoutError()

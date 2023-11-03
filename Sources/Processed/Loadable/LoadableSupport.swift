@@ -22,6 +22,16 @@
 
 import SwiftUI
 
+// TODO: Use @_inheritActorContext -> For TaskStore:
+/*
+ 
+ let task = Task {}
+ Task {
+  await TaskStore.shared.store(task)
+ }
+ 
+ */
+
 /// A protocol that adds support for automatic state and `Task` management for ``Processed/LoadableState`` to the class.
 ///
 /// The provided method takes care of creating a `Task` to load the resource, cancel any previous `Task` instances and setting
@@ -76,7 +86,7 @@ public protocol LoadableSupport: AnyObject {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
-    block: @escaping () async throws -> Value
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value
   ) -> Task<Void, Never>
   
   /// Starts a resource loading process in a new `Task`, waiting for a return value or thrown error from the
@@ -107,8 +117,8 @@ public protocol LoadableSupport: AnyObject {
     silently runSilently: Bool,
     interrupts: [Duration],
     priority: TaskPriority?,
-    block: @escaping () async throws -> Value,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never>
 
   /// Starts a resource loading process in the current asynchronous context,
@@ -130,7 +140,7 @@ public protocol LoadableSupport: AnyObject {
   @MainActor func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
-    block: @escaping () async throws -> Value
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value
   ) async
   
   /// Starts a resource loading process in the current asynchronous context,
@@ -160,10 +170,9 @@ public protocol LoadableSupport: AnyObject {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     interrupts: [Duration],
-    block: @escaping () async throws -> Value,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async
-
 
   /// Starts a resource loading process in a new `Task` that continuously yields results
   /// until the `block` closure terminates or fails, while setting the ``Processed/LoadableState`` accordingly.
@@ -185,7 +194,7 @@ public protocol LoadableSupport: AnyObject {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     priority: TaskPriority?,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) -> Task<Void, Never>
   
   /// Starts a resource loading process in a new `Task` that continuously yields results
@@ -216,8 +225,8 @@ public protocol LoadableSupport: AnyObject {
     silently runSilently: Bool,
     interrupts: [Duration],
     priority: TaskPriority?,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never>
 
   /// Starts a resource loading process in the current asynchronous context, that continuously yields results
@@ -238,7 +247,7 @@ public protocol LoadableSupport: AnyObject {
   @MainActor func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) async
   
   /// Starts a resource loading process in the current asynchronous context, that continuously yields results
@@ -267,8 +276,8 @@ public protocol LoadableSupport: AnyObject {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool,
     interrupts: [Duration],
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async
 }
 
@@ -293,7 +302,7 @@ extension LoadableSupport {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
-    block: @escaping () async throws -> Value
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
@@ -312,8 +321,8 @@ extension LoadableSupport {
     silently runSilently: Bool = false,
     interrupts: [Duration],
     priority: TaskPriority? = nil,
-    block: @escaping () async throws -> Value,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
@@ -329,7 +338,7 @@ extension LoadableSupport {
   @MainActor public func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
-    block: @escaping () async throws -> Value
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value
   ) async {
     setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
     await runReturningTaskBody(loadableState, block: block)
@@ -340,8 +349,8 @@ extension LoadableSupport {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     interrupts: [Duration],
-    block: @escaping () async throws -> Value,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
     await runReturningTaskBody(loadableState, interrupts: interrupts, block: block, onInterrupt: onInterrupt)
@@ -351,7 +360,7 @@ extension LoadableSupport {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
@@ -370,8 +379,8 @@ extension LoadableSupport {
     silently runSilently: Bool = false,
     interrupts: [Duration],
     priority: TaskPriority? = nil,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) -> Task<Void, Never> {
     let identifier = TaskStore.shared.identifier(for: loadableState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
@@ -387,7 +396,7 @@ extension LoadableSupport {
   @MainActor public func load<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) async {
     setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
     await runYieldingTaskBody(loadableState, block: block)
@@ -398,8 +407,8 @@ extension LoadableSupport {
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     silently runSilently: Bool = false,
     interrupts: [Duration],
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     setLoadingStateIfNeeded(on: loadableState, runSilently: runSilently)
     await runYieldingTaskBody(loadableState, interrupts: interrupts, block: block, onInterrupt: onInterrupt)
@@ -407,7 +416,7 @@ extension LoadableSupport {
 
   @MainActor private func runReturningTaskBody<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
-    block: @escaping () async throws -> Value
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value
   ) async {
     do {
       self[keyPath: loadableState] = try await .loaded(block())
@@ -426,8 +435,8 @@ extension LoadableSupport {
   @MainActor private func runReturningTaskBody<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     interrupts: [Duration],
-    block: @escaping () async throws -> Value,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     do {
       try await withThrowingTaskGroup(of: Void.self) { group in
@@ -469,7 +478,7 @@ extension LoadableSupport {
 
   @MainActor private func runYieldingTaskBody<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
   ) async {
     do {
       try await block { self[keyPath: loadableState] = $0 }
@@ -488,8 +497,8 @@ extension LoadableSupport {
   @MainActor private func runYieldingTaskBody<Value>(
     _ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>,
     interrupts: [Duration],
-    block: @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
-    onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    @_implicitSelfCapture block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     do {
       try await withThrowingTaskGroup(of: Void.self) { group in

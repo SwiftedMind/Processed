@@ -50,8 +50,7 @@ struct LoadableInterruptsInClassDemo: View {
       load(\.numbers, interrupts: [.seconds(2), .seconds(3)]) {
         try await Task.sleep(for: .seconds(10))
         return [1, 2, 3, 4, 5]
-      } onInterrupt: { [weak self] accumulatedDelay in
-        guard let self else { return }
+      } onInterrupt: { accumulatedDelay in
         switch accumulatedDelay {
         case .seconds(5): // Accumulated 3 seconds at this point
           throw TimeoutError()
