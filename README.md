@@ -52,8 +52,8 @@ struct DemoView: View {
 - [Documentation](#documentation)
 - [Background](#background)
 - **[Get Started](#get-started)**
-	- [LoadableState](#loadablestate)
- 	- [ProcessState](#processstate)
+	- [Loadable](#loadable)
+ 	- [Process](#process)
 - [Example Apps](#example-apps)
 - [License](#license)
 
@@ -150,7 +150,7 @@ And that's exactly what Processed helps with. It hides that boilerplate behind a
 
 ## Get Started
 
-### LoadableState
+### Loadable
 
 Processed defines a `LoadableState` enum that can be used to represent the loading state of some data. It also comes with a lot of handy properties and methods, like `.isLoading`, `.setLoading()`, `.data` etc.
 
@@ -288,7 +288,7 @@ However, it's still really easy: You have to conform your class to the `Loadable
 }
 ```
 
-### ProcessState
+### Process
 
 Processed also defines a `ProcessState` enum that can be used to represent the state of a generic process, like logging in, saving something or a deletion. Just as `LoadableState`, it comes with a lot of handy properties and methods, like `.isRunning`, `.setFinished()`, `.error`, etc.
 
