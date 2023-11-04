@@ -51,9 +51,9 @@ struct DemoView: View {
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Background](#background)
-- **[Get Started](#get-started)**
-	- [Loadable](#loadable)
- 	- [Process](#process)
+- [Get Started](#get-started)
+	- **[Loadable](#loadable)**
+ 	- **[Process](#process)**
 - [Example Apps](#example-apps)
 - [License](#license)
 
