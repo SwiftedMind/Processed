@@ -60,6 +60,9 @@ struct SimpleProcessInClassDemo: View {
     .animation(.default, value: viewModel.process)
     .navigationTitle("Simple Process (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
+    .onDisappear {
+      viewModel.cancelProcess()
+    }
   }
 
   @ViewBuilder @MainActor

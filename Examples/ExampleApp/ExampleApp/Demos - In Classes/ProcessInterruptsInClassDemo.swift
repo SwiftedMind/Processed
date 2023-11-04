@@ -73,6 +73,9 @@ struct ProcessInterruptsInClassDemo: View {
     .onChange(of: viewModel.process) {
       viewModel.showLoadingDelay = false
     }
+    .onDisappear {
+      viewModel.cancelProcess()
+    }
   }
 
   @ViewBuilder @MainActor

@@ -40,6 +40,9 @@ struct SharedProcessDemo: View {
     .animation(.default, value: process)
     .navigationTitle("Shared Process")
     .navigationBarTitleDisplayMode(.inline)
+    .onDisappear {
+      $process.cancel()
+    }
   }
 
   @ViewBuilder @MainActor

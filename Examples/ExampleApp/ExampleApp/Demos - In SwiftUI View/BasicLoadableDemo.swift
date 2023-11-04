@@ -35,6 +35,9 @@ struct BasicLoadableDemo: View {
     .animation(.default, value: numbers)
     .navigationTitle("Basic Loadable")
     .navigationBarTitleDisplayMode(.inline)
+    .onDisappear {
+      $numbers.cancel()
+    }
   }
   
   @ViewBuilder @MainActor

@@ -35,6 +35,9 @@ struct SimpleProcessDemo: View {
     .animation(.default, value: process)
     .navigationTitle("Simple Process")
     .navigationBarTitleDisplayMode(.inline)
+    .onDisappear {
+      $process.cancel()
+    }
   }
 
   @ViewBuilder @MainActor

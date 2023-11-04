@@ -65,6 +65,9 @@ struct SharedProcessInClassDemo: View {
     .animation(.default, value: viewModel.process)
     .navigationTitle("Shared Process (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
+    .onDisappear {
+      viewModel.cancelProcess()
+    }
   }
 
   @ViewBuilder @MainActor

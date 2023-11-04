@@ -27,7 +27,15 @@ struct RefreshableLoadableInClassDemo: View {
   @MainActor final class ViewModel: ObservableObject, LoadableSupport {
 
     @Published var numbers: LoadableState<[Int]> = .absent
+    
+    func cancelNumbers() {
+      cancel(\.numbers)
+    }
 
+    func resetNumbers() {
+      reset(\.numbers)
+    }
+    
     func loadNumbers() {
       load(\.numbers) {
         return try await fetchNumbers()
@@ -65,6 +73,9 @@ struct RefreshableLoadableInClassDemo: View {
       // On a refresh, we skip the loading indicator so the current ".loaded" or ".error" state is kept until
       // we override it with a new ".loaded" or ".error" state
       await viewModel.refreshNumbers()
+    }
+    .onDisappear {
+      viewModel.cancelNumbers()
     }
   }
 

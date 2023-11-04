@@ -30,6 +30,14 @@ struct RestartableLoadableInClassDemo: View {
     @Published var shouldFail: Bool = false
     @Published var numbers: LoadableState<[Int]> = .absent
     
+    func cancelNumbers() {
+      cancel(\.numbers)
+    }
+
+    func resetNumbers() {
+      reset(\.numbers)
+    }
+    
     func stream() async {
       await load(\.numbers) { yield in
         var numbers: [Int] = []

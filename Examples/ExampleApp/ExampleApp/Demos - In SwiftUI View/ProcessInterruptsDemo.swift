@@ -40,6 +40,9 @@ struct ProcessInterruptsDemo: View {
     .onChange(of: process) {
       showLoadingDelay = false
     }
+    .onDisappear {
+      $process.cancel()
+    }
   }
 
   @ViewBuilder @MainActor

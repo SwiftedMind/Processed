@@ -22,16 +22,6 @@
 
 import SwiftUI
 
-// TODO: Use @_inheritActorContext -> For TaskStore:
-/*
- 
- let task = Task {}
- Task {
-  await TaskStore.shared.store(task)
- }
- 
- */
-
 /// A protocol that adds support for automatic state and `Task` management for ``Processed/LoadableState`` to the class.
 ///
 /// The provided method takes care of creating a `Task` to load the resource, cancel any previous `Task` instances and setting

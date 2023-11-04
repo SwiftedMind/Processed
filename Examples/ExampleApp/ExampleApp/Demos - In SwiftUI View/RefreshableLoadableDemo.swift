@@ -42,6 +42,9 @@ struct RefreshableLoadableDemo: View {
       // we override it with a new ".loaded" or ".error" state
       await refreshNumbers()
     }
+    .onDisappear {
+      $numbers.cancel()
+    }
   }
 
   @ViewBuilder @MainActor

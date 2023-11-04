@@ -66,6 +66,9 @@ struct BasicLoadableInClassDemo: View {
     .animation(.default, value: viewModel.numbers)
     .navigationTitle("Loadable Process (Protocol)")
     .navigationBarTitleDisplayMode(.inline)
+    .onDisappear {
+      viewModel.cancelNumbers()
+    }
   }
 
   @ViewBuilder @MainActor

@@ -75,6 +75,9 @@ struct LoadableInterruptsInClassDemo: View {
     .onChange(of: viewModel.numbers) {
       viewModel.showLoadingDelay = false
     }
+    .onDisappear {
+      viewModel.cancelNumbers()
+    }
   }
   
   @ViewBuilder @MainActor

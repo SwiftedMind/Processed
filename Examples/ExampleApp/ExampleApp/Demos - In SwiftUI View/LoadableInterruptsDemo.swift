@@ -40,6 +40,9 @@ struct LoadableInterruptsDemo: View {
     .onChange(of: numbers) {
       showLoadingDelay = false
     }
+    .onDisappear {
+      $numbers.cancel()
+    }
   }
   
   @ViewBuilder @MainActor
