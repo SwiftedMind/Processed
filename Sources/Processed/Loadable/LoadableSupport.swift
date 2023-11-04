@@ -282,7 +282,8 @@ extension LoadableSupport {
   }
 
   @MainActor public func reset<Value>(_ loadableState: ReferenceWritableKeyPath<Self, LoadableState<Value>>) {
-    if case .absent = self[keyPath: loadableState] {} else {
+    if case .absent = self[keyPath: loadableState] {
+    } else {
       self[keyPath: loadableState] = .absent
     }
     cancel(loadableState)
@@ -533,7 +534,8 @@ extension LoadableSupport {
     runSilently: Bool
   ) {
     if !runSilently {
-      if case .loading = self[keyPath: loadableState] {} else {
+      if case .loading = self[keyPath: loadableState] {
+      } else {
         self[keyPath: loadableState] = .loading
       }
     }

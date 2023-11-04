@@ -319,7 +319,8 @@ extension ProcessSupport {
   @MainActor public func reset<ProcessID: Equatable>(
     _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>
   ) {
-    if case .idle = self[keyPath: processState] {} else {
+    if case .idle = self[keyPath: processState] {
+    } else {
       self[keyPath: processState] = .idle
     }
     cancel(processState)
@@ -546,7 +547,8 @@ extension ProcessSupport {
     runSilently: Bool
   ) {
     if !runSilently {
-      if case .running(let runningProcess) = self[keyPath: processState], runningProcess == process {} else {
+      if case .running(let runningProcess) = self[keyPath: processState], runningProcess == process {
+      } else {
         self[keyPath: processState] = .running(process)
       }
     }
