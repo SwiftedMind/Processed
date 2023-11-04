@@ -409,7 +409,7 @@ $process.reset() // Cancel internal Task and reset state to .absent
 // Throw this in the `run` closure, to cancel a process from the inside:
 throw CancelProcess()
 
-// Throw this in the `run` closure, to reset a loading process from the inside:
+// Throw this in the `run` closure, to reset a process from the inside:
 throw ResetProcess()
 ```
 
