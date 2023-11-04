@@ -51,9 +51,10 @@ struct DemoView: View {
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Background](#background)
-- [Get Started](#get-started)
-	- **[Loadable](#loadable)**
- 	- **[Process](#process)**
+- **[Loadable](#loadable)**
+	- [Loadable in Classes](#use-processstate-in-classes)
+- **[Process](#process)**
+	- [Process in Classes](#use-loadablestate-in-classes)
 - [Example Apps](#example-apps)
 - [License](#license)
 
@@ -66,7 +67,7 @@ Processed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 Add the following line to the dependencies in your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/SwiftedMind/Processed", from: "1.0.0")
+.package(url: "https://github.com/SwiftedMind/Processed", from: "2.0.0")
 ```
 
 ### Xcode project
@@ -147,8 +148,6 @@ func loadNumbers() {
 The interesting thing here is that almost everything inside the method is boilerplate. You always have to cancel any previous loading tasks, create a new task, set the `.loading` state and you always have to end with either a `.loaded` state or an `.error` state. The only part that's unique to this specific situation is actually loading the data.
 
 And that's exactly what Processed helps with. It hides that boilerplate behind a set of easy to use types and property wrappers. Let's have a look at how it works.
-
-## Get Started
 
 ### Loadable
 
