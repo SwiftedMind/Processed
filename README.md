@@ -248,6 +248,9 @@ $numbers.reset() // Cancel internal Task and reset state to .absent
 
 // Throw this in the `load` closure, to cancel a loading process from the inside:
 throw CancelLoadable()
+
+// Throw this in the `load` closure, to reset a loading process from the inside:
+throw ResetLoadable()
 ```
 
 #### Use `LoadableState` in Classes
@@ -405,6 +408,9 @@ $process.reset() // Cancel internal Task and reset state to .absent
 
 // Throw this in the `run` closure, to cancel a process from the inside:
 throw CancelProcess()
+
+// Throw this in the `run` closure, to reset a loading process from the inside:
+throw ResetProcess()
 ```
 
 #### Use `ProcessState` in Classes
