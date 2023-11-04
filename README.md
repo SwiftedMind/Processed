@@ -1,8 +1,4 @@
-
-
-<p align="left">
-  <img width="100" height="100" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
-</p>
+<img width="100" height="100" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
 
 # Processed
 
