@@ -31,7 +31,7 @@ private struct LoadingButtonModifier: ViewModifier {
         .disabled(isLoading)
       Spacer()
       if isLoading {
-        ProgressView()
+        ProgressView().id(UUID())
       }
     }
   }

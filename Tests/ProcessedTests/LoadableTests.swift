@@ -143,4 +143,74 @@ private struct EquatableError: Error, Equatable {}
     
     XCTAssertEqual(container.loadableHistory, [.absent, .loading,])
   }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testBasicTimeout() async throws {
+    let container = LoadableContainer<Int>()
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
+    
+    await binding.load(interrupts: [.milliseconds(100)]) {
+      try await Task.sleep(for: .milliseconds(200))
+      return 42
+    } onInterrupt: { accumulatedDelay in
+      throw TimeoutError()
+    }
+    
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .error(TimeoutError())])
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testUnneededTimeout() async throws {
+    let container = LoadableContainer<Int>()
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
+    
+    await binding.load(interrupts: [.milliseconds(200)]) {
+      try await Task.sleep(for: .milliseconds(100))
+      return 42
+    } onInterrupt: { accumulatedDelay in
+      throw TimeoutError()
+    }
+    
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .loaded(42)])
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testMultipleInterrupts() async throws {
+    let container = LoadableContainer<Int>()
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
+    
+    var count = 0
+    await binding.load(interrupts: [.milliseconds(100), .milliseconds(300)]) {
+      try await Task.sleep(for: .milliseconds(500))
+      return 42
+    } onInterrupt: { accumulatedDelay in
+      count += 1
+      if accumulatedDelay == .milliseconds(400) {
+        throw EquatableError()
+      }
+    }
+    
+    XCTAssertEqual(count, 2)
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .error(EquatableError())])
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testSecondInterruptNotNeeded() async throws {
+    let container = LoadableContainer<Int>()
+    let binding = Loadable.Binding(state: container.loadableBinding, task: container.taskBinding)
+    
+    var count = 0
+    await binding.load(interrupts: [.milliseconds(100), .milliseconds(300)]) {
+      try await Task.sleep(for: .milliseconds(200))
+      return 42
+    } onInterrupt: { accumulatedDelay in
+      count += 1
+      if accumulatedDelay == .milliseconds(400) {
+        throw EquatableError()
+      }
+    }
+    
+    XCTAssertEqual(count, 1)
+    XCTAssertEqual(container.loadableHistory, [.absent, .loading, .loaded(42)])
+  }
 }

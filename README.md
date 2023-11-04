@@ -1,8 +1,4 @@
-
-
-<p align="center">
-  <img width="200" height="200" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
-</p>
+<img width="100" height="100" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
 
 # Processed
 
@@ -11,7 +7,7 @@
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSwiftedMind%2FProcessed%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/SwiftedMind/Processed)
 ![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
 
-Processed is a lightweight wrapper around the handling of loading states in SwiftUI, reducing repetitive boilerplate code and improving code readability. It works in SwiftUI views via two property wrappers (`@Loadable` and `@Process`) as well as in arbitrary classes using the `LoadableSupport` and `ProcessSupport` protocols. It also supports full manual state control for situations where the defaults don't work as needed.
+Processed is a lightweight, automatic loading state handler for SwiftUI, reducing repetitive boilerplate code and improving code readability. It works in views via two property wrappers (`@Loadable` and `@Process`) as well as in arbitrary classes using the `LoadableSupport` and `ProcessSupport` protocols. It also supports full manual state control for situations where the defaults don't work as needed.
 
 ```swift
 struct DemoView: View {
@@ -51,9 +47,10 @@ struct DemoView: View {
 - [Installation](#installation)
 - [Documentation](#documentation)
 - [Background](#background)
-- **[Get Started](#get-started)**
-	- [LoadableState](#loadablestate)
- 	- [ProcessState](#processstate)
+- **[Loadable](#loadable)**
+	- [Loadable in Classes](#use-processstate-in-classes)
+- **[Process](#process)**
+	- [Process in Classes](#use-loadablestate-in-classes)
 - [Example Apps](#example-apps)
 - [License](#license)
 
@@ -66,7 +63,7 @@ Processed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 Add the following line to the dependencies in your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/SwiftedMind/Processed", from: "1.0.0")
+.package(url: "https://github.com/SwiftedMind/Processed", from: "2.0.0")
 ```
 
 ### Xcode project
@@ -148,9 +145,7 @@ The interesting thing here is that almost everything inside the method is boiler
 
 And that's exactly what Processed helps with. It hides that boilerplate behind a set of easy to use types and property wrappers. Let's have a look at how it works.
 
-## Get Started
-
-### LoadableState
+### Loadable
 
 Processed defines a `LoadableState` enum that can be used to represent the loading state of some data. It also comes with a lot of handy properties and methods, like `.isLoading`, `.setLoading()`, `.data` etc.
 
@@ -249,6 +244,9 @@ $numbers.reset() // Cancel internal Task and reset state to .absent
 
 // Throw this in the `load` closure, to cancel a loading process from the inside:
 throw CancelLoadable()
+
+// Throw this in the `load` closure, to reset a loading process from the inside:
+throw ResetLoadable()
 ```
 
 #### Use `LoadableState` in Classes
@@ -288,7 +286,7 @@ However, it's still really easy: You have to conform your class to the `Loadable
 }
 ```
 
-### ProcessState
+### Process
 
 Processed also defines a `ProcessState` enum that can be used to represent the state of a generic process, like logging in, saving something or a deletion. Just as `LoadableState`, it comes with a lot of handy properties and methods, like `.isRunning`, `.setFinished()`, `.error`, etc.
 
@@ -406,6 +404,9 @@ $process.reset() // Cancel internal Task and reset state to .absent
 
 // Throw this in the `run` closure, to cancel a process from the inside:
 throw CancelProcess()
+
+// Throw this in the `run` closure, to reset a process from the inside:
+throw ResetProcess()
 ```
 
 #### Use `ProcessState` in Classes
@@ -445,6 +446,10 @@ enum  ProcessKind {
 ## Example Apps
 
 You can find an example app in the [Examples](https://github.com/SwiftedMind/Processed/tree/main/Examples) folder of this repository.
+
+| App  | Simple Process Demo | Basic Loadable Demo |
+| ------------- | ------------- | ------------- |
+| ![Simulator Screenshot - iPhone 15 Pro - 2023-11-04 at 06 58 27](https://github.com/SwiftedMind/Processed/assets/7083109/5c664070-eca5-493a-b02e-f94e06a1baba) | ![Simulator Screenshot - iPhone 15 Pro - 2023-11-04 at 06 58 31](https://github.com/SwiftedMind/Processed/assets/7083109/967b9f83-5de5-48ba-b41c-ae8c983e2750) |  ![Simulator Screenshot - iPhone 15 Pro - 2023-11-04 at 06 58 40](https://github.com/SwiftedMind/Processed/assets/7083109/5401d592-131f-4910-91ab-34c4321ad12d) |
 
 ## License
 

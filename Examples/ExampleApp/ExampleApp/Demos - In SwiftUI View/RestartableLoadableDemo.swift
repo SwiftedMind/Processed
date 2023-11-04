@@ -23,7 +23,7 @@
 import SwiftUI
 import Processed
 
-struct RestartableDemo: View {
+struct RestartableLoadableDemo: View {
 
   // An id that can be used to restart the task that runs the continuous observation
   @State var numbersObservationId: UUID = .init()
@@ -36,7 +36,7 @@ struct RestartableDemo: View {
       loadableState
     }
     .animation(.default, value: numbers)
-    .navigationTitle("Restartable Demo")
+    .navigationTitle("Restartable Loadable")
     .navigationBarTitleDisplayMode(.inline)
     .task(id: numbersObservationId) {
       // This task will cancel when the view disappears and restart if numbersObservationId changes
@@ -50,6 +50,7 @@ struct RestartableDemo: View {
       Button("Simulate stream error", role: .cancel) {
         shouldFail = true
       }
+      .disabled(numbers.isError)
     } footer: {
       Text("Tap here to interrupt the loading stream and simulate an error case so you can test a restart")
     }
@@ -61,7 +62,7 @@ struct RestartableDemo: View {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
+      ProgressView().id(UUID())
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
     case .error:
@@ -103,7 +104,7 @@ struct RestartableDemo: View {
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      RestartableDemo().preferredColorScheme(.dark)
+      RestartableLoadableDemo().preferredColorScheme(.dark)
     }
   }
 }

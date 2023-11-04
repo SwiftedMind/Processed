@@ -23,9 +23,10 @@
 import SwiftUI
 import Processed
 
-struct SingleProcessDemo: View {
+struct ProcessInterruptsDemo: View {
 
   @Process var process
+  @State var showLoadingDelay = false
 
   var body: some View {
     List {
@@ -33,8 +34,15 @@ struct SingleProcessDemo: View {
       processState
     }
     .animation(.default, value: process)
-    .navigationTitle("Single Process Demo")
+    .animation(.default, value: showLoadingDelay)
+    .navigationTitle("Process Interrupts")
     .navigationBarTitleDisplayMode(.inline)
+    .onChange(of: process) {
+      showLoadingDelay = false
+    }
+    .onDisappear {
+      $process.cancel()
+    }
   }
 
   @ViewBuilder @MainActor
@@ -44,8 +52,8 @@ struct SingleProcessDemo: View {
         runSuccess()
       }
       .disabled(process.isRunning)
-      Button("Run process with error") {
-        runError()
+      Button("Run process with timeout") {
+        runTimeout()
       }
       .disabled(process.isRunning)
     }
@@ -73,16 +81,26 @@ struct SingleProcessDemo: View {
         HStack {
           Text("Running")
           Spacer()
-          ProgressView()
+          ProgressView().id(UUID())
         }
       case .failed(_, let error):
-        Text("An error occurred: \(error.localizedDescription)")
-          .foregroundStyle(.red)
+        switch error {
+        case is TimeoutError:
+          Text("Timeout")
+            .foregroundStyle(.red)
+        default:
+          Text("An error occurred: \(error.localizedDescription)")
+            .foregroundStyle(.red)
+        }
       case .finished:
         Text("Success!")
       }
     } header: {
       Text("Process state")
+    } footer: {
+      if showLoadingDelay {
+        Text("The process seems to run longer than expected")
+      }
     }
   }
 
@@ -92,16 +110,23 @@ struct SingleProcessDemo: View {
     }
   }
 
-  @MainActor func runError() {
-    $process.run {
-      try await Task.sleep(for: .seconds(2))
-      throw NSError(domain: "Something went wrong", code: 500)
+  @MainActor func runTimeout() {
+    // Show "delay" info after 1 second, and time out after 2 seconds
+    $process.run(interrupts: [.seconds(2), .seconds(3)]) {
+      try await Task.sleep(for: .seconds(10))
+    } onInterrupt: { accumulatedDelay in
+      switch accumulatedDelay {
+      case .seconds(5): // Accumulated 3 seconds at this point
+        throw TimeoutError()
+      default: 
+        showLoadingDelay = true
+      }
     }
   }
 }
 
 #Preview {
   NavigationStack {
-    SingleProcessDemo().preferredColorScheme(.dark)
+    ProcessInterruptsDemo().preferredColorScheme(.dark)
   }
 }

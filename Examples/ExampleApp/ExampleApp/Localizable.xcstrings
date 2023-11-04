@@ -1,0 +1,169 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "An error occurred" : {
+
+    },
+    "An error occurred during %@: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "An error occurred during %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "An error occurred: %@" : {
+
+    },
+    "Basic Loadable" : {
+
+    },
+    "Cancel" : {
+
+    },
+    "Delete" : {
+
+    },
+    "Demos" : {
+
+    },
+    "Finished %@" : {
+
+    },
+    "Idle" : {
+
+    },
+    "Learn how to use the `@Process` and `@Loadable` property wrappers in any SwiftUI view" : {
+
+    },
+    "Learn how to use the `ProcessSupport` and `LoadableSupport` protocols in an `ObservableObject` or any other class" : {
+
+    },
+    "Load all numbers" : {
+
+    },
+    "Load All Numbers" : {
+
+    },
+    "Load with timeout" : {
+
+    },
+    "Loadable Interrupts" : {
+
+    },
+    "Loadable Interrupts (Protocol)" : {
+
+    },
+    "Loadable Process (Protocol)" : {
+
+    },
+    "Press Me" : {
+
+    },
+    "Process Interrupts" : {
+
+    },
+    "Process Interrupts (Protocol)" : {
+
+    },
+    "Process state" : {
+
+    },
+    "Processed" : {
+
+    },
+    "Property Wrapper" : {
+
+    },
+    "Protocols" : {
+
+    },
+    "Pull down to refresh the numbers" : {
+
+    },
+    "Refreshable Loadable" : {
+
+    },
+    "Refreshable Loadable (Protocol)" : {
+
+    },
+    "Reset" : {
+
+    },
+    "Restartable Loadable" : {
+
+    },
+    "Restartable Loadable (Protocol)" : {
+
+    },
+    "Retry" : {
+
+    },
+    "Run process with error" : {
+
+    },
+    "Run process with success" : {
+
+    },
+    "Run process with timeout" : {
+
+    },
+    "Running" : {
+
+    },
+    "Running %@" : {
+
+    },
+    "Save" : {
+
+    },
+    "See how you can use `LoadableSupport` in an `ObservableObject` or any other class." : {
+
+    },
+    "See how you can use `ProcessSupport` in an `ObservableObject` or any other class." : {
+
+    },
+    "See how you can use the `@Loadable` property wrapper directly in your SwiftUI views." : {
+
+    },
+    "See how you can use the `@Process` property wrapper directly in your views." : {
+
+    },
+    "Shared Process" : {
+
+    },
+    "Shared Process (Protocol)" : {
+
+    },
+    "Simple Process" : {
+
+    },
+    "Simple Process (Protocol)" : {
+
+    },
+    "Simulate stream error" : {
+
+    },
+    "Stream numbers" : {
+
+    },
+    "Stream Numbers" : {
+
+    },
+    "Success!" : {
+
+    },
+    "Tap here to interrupt the loading stream and simulate an error case so you can test a restart" : {
+
+    },
+    "The process seems to run longer than expected" : {
+
+    },
+    "Timeout" : {
+
+    }
+  },
+  "version" : "1.0"
+}

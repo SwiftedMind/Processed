@@ -23,93 +23,104 @@
 import SwiftUI
 import Processed
 
-struct LoadableInClassDemo: View {
-  enum ProcessKind: String, Equatable {
-    case save = "Save"
-    case delete = "Delete"
-  }
-
-  @MainActor final class ViewModel: ObservableObject, LoadableSupport {
-
-    @Published var numbers: LoadableState<[Int]> = .absent
-
-    func cancelNumbers() {
-      cancel(\.numbers)
-    }
-
-    func resetNumbers() {
-      reset(\.numbers)
-    }
-
-    func load() {
-      load(\.numbers) {
-        try await Task.sleep(for: .seconds(2))
-        return [1, 2, 3, 4, 5]
-      }
-    }
-
-    func stream() {
-      load(\.numbers) { yield in
-        var numbers: [Int] = []
-        for await number in [1, 2, 3, 4, 5].publisher.values {
-          try await Task.sleep(for: .seconds(1))
-          numbers.append(number)
-          yield(.loaded(numbers))
-        }
-      }
-    }
-  }
-
-  @StateObject var viewModel = ViewModel()
-
+struct LoadableInterruptsDemo: View {
+  
+  @Loadable var numbers: LoadableState<[Int]>
+  @State var showLoadingDelay: Bool = false
+  
   var body: some View {
     List {
       buttons
       loadableState
     }
-    .animation(.default, value: viewModel.numbers)
-    .navigationTitle("Loadable Demo (VM)")
+    .animation(.default, value: numbers)
+    .animation(.default, value: showLoadingDelay)
+    .navigationTitle("Loadable Interrupts")
     .navigationBarTitleDisplayMode(.inline)
+    .onChange(of: numbers) {
+      showLoadingDelay = false
+    }
+    .onDisappear {
+      $numbers.cancel()
+    }
   }
-
+  
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Load All Numbers") {
-        viewModel.load()
+      Button("Load all numbers") {
+        load()
       }
-      Button("Stream Numbers") {
-        viewModel.stream()
+      Button("Load with timeout") {
+        loadWithTimeout()
       }
     }
-
+    
     Section {
       Button("Cancel") {
         // Cancel the current loading process and keep the state where it currently is
         // so that you can start a new process without introducing data races
-        viewModel.cancelNumbers()
+        $numbers.cancel()
       }
       Button("Reset") {
         // Cancel the current loading process and reset the state to .absent
-        viewModel.resetNumbers()
+        $numbers.reset()
       }
     }
   }
-
+  
   @ViewBuilder @MainActor
   private var loadableState: some View {
-    switch viewModel.numbers {
+    switch numbers {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
-        .frame(maxWidth: .infinity)
-        .listRowBackground(Color.clear)
+      VStack {
+        ProgressView().id(UUID())
+          .padding(.vertical)
+        if showLoadingDelay {
+          Text("The process seems to run longer than expected")
+            .lineLimit(2, reservesSpace: true)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .frame(maxWidth: .infinity)
+      .listRowBackground(Color.clear)
     case .error(let error):
-      Text("An error occurred: \(error.localizedDescription)")
+      switch error {
+      case is TimeoutError:
+        Text("Timeout")
+          .foregroundStyle(.red)
+      default:
+        Text("An error occurred: \(error.localizedDescription)")
+          .foregroundStyle(.red)
+      }
     case .loaded(let numbers):
       ForEach(numbers, id: \.self) { number in
         Text(String(number))
+      }
+    }
+  }
+  
+  @MainActor func load() {
+    $numbers.load {
+      try await Task.sleep(for: .seconds(2))
+      return [1, 2, 3, 4, 5]
+    }
+  }
+  
+  @MainActor func loadWithTimeout() {
+    // Show "delay" info after 1 second, and time out after 2 seconds
+    $numbers.load(interrupts: [.seconds(2), .seconds(3)]) {
+      try await Task.sleep(for: .seconds(10))
+      return [1, 2, 3, 4, 5]
+    } onInterrupt: { accumulatedDelay in
+      switch accumulatedDelay {
+      case .seconds(5): // Accumulated 3 seconds at this point
+        throw TimeoutError()
+      default:
+        showLoadingDelay = true
       }
     }
   }
@@ -118,7 +129,7 @@ struct LoadableInClassDemo: View {
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      LoadableInClassDemo().preferredColorScheme(.dark)
+      LoadableInterruptsDemo().preferredColorScheme(.dark)
     }
   }
 }
