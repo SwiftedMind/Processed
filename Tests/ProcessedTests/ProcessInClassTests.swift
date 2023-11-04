@@ -155,6 +155,72 @@ final class ProcessInClassTests: XCTestCase {
       .finished(secondProcess)
     ])
   }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testBasicTimeout() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    
+    await container.run(\.process, as: process, interrupts: [.milliseconds(100)]) {
+      try await Task.sleep(for: .milliseconds(200))
+    } onInterrupt: { accumulatedDelay in
+      throw TimeoutError()
+    }
+    
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .failed(process: process, error: TimeoutError())])
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testUnneededTimeout() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    
+    await container.run(\.process, as: process, interrupts: [.milliseconds(200)]) {
+      try await Task.sleep(for: .milliseconds(100))
+    } onInterrupt: { accumulatedDelay in
+      throw TimeoutError()
+    }
+    
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .finished(process)])
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testMultipleInterrupts() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    
+    var count = 0
+    await container.run(\.process, as: process, interrupts: [.milliseconds(100), .milliseconds(300)]) {
+      try await Task.sleep(for: .milliseconds(500))
+    } onInterrupt: { accumulatedDelay in
+      count += 1
+      if accumulatedDelay == .milliseconds(400) {
+        throw EquatableError()
+      }
+    }
+    
+    XCTAssertEqual(count, 2)
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .failed(process: process, error: EquatableError())])
+  }
+  
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor func testSecondInterruptNotNeeded() async throws {
+    let container = ProcessContainer<SingleProcess>()
+    let process = SingleProcess(id: "1")
+    
+    var count = 0
+    await container.run(\.process, as: process, interrupts: [.milliseconds(100), .milliseconds(300)]) {
+      try await Task.sleep(for: .milliseconds(200))
+    } onInterrupt: { accumulatedDelay in
+      count += 1
+      if accumulatedDelay == .milliseconds(400) {
+        throw EquatableError()
+      }
+    }
+    
+    XCTAssertEqual(count, 1)
+    XCTAssertEqual(container.processHistory, [.idle, .running(process), .finished(process)])
+  }
 }
 
 
