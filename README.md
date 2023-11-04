@@ -29,7 +29,7 @@ struct DemoView: View {
       case .absent: 
         EmptyView()
       case .loading: 
-        ProgressView().id(UUID())
+        ProgressView()
       case .error(let error): 
         Text("\(error.localizedDescription)")
       case .loaded(let numbers):
