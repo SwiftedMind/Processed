@@ -1,3 +1,6 @@
+> [!NOTE]
+> This branch has been merged with the develop branch. You should use that branch to test the new functionality that comes with Processed 2.0.0
+
 <img width="100" height="100" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
 
 # Processed
