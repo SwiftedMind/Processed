@@ -44,15 +44,17 @@ struct DemoView: View {
 
 ## Content
 
-- [Installation](#installation)
-- [Documentation](#documentation)
-- [Background](#background)
-- **[Loadable](#loadable)**
+1. [Installation](#installation)
+2. [Documentation](#documentation)
+3. [Background](#background)
+4. **[Loadable](#loadable)**
 	- [Loadable in Classes](#use-processstate-in-classes)
-- **[Process](#process)**
+5. **[Process](#process)**
 	- [Process in Classes](#use-loadablestate-in-classes)
-- [Example Apps](#example-apps)
-- [License](#license)
+6. [Advanced Features](#advanced-features)
+	- [Interrupts](#interrupts)
+7. [Examples](#examples)
+8. [License](#license)
 
 ## Installation
 
@@ -443,9 +445,34 @@ enum  ProcessKind {
 }
 ```
 
-## Example Apps
+## Advanced Features
 
-You can find an example app in the [Examples](https://github.com/SwiftedMind/Processed/tree/main/Examples) folder of this repository.
+### Interrupts
+
+All of the `load` and `run` methods from above have overloads to add something called "interrupts". An interrupt is a closure that is called in parallel, during the (loading) process, allowing you to run logic based on how long that process takes. This makes it easy to add a timeout when the process takes too long or fade in a view that says "Loading takes a bit longer than expected". Here is an example:
+
+```swift
+@Loadable var numbers: LoadableState<[Int]>
+@State var showLoadingDelay = false
+// ...
+@MainActor func loadWithTimeout() {
+ $numbers.load(interrupts: [.seconds(2), .seconds(3)]) {
+  try await Task.sleep(for: .seconds(10))
+  return [42]
+ } onInterrupt: { accumulatedDelay in
+  switch accumulatedDelay {
+  case .seconds(5):
+   throw TimeoutError()
+  default:
+   showLoadingDelay = true
+  }
+ }
+}
+```
+
+## Examples
+
+You can find a demo project in the [Examples](https://github.com/SwiftedMind/Processed/tree/main/Examples) folder of this repository. In there, you will find a selection of examples and demonstrations you can use to get started.
 
 | App  | Simple Process Demo | Basic Loadable Demo |
 | ------------- | ------------- | ------------- |
