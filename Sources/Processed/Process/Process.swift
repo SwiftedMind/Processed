@@ -60,16 +60,16 @@ import SwiftUI
 ///
 /// - Note: This is only meant to be used from within SwiftUI views.
 /// If you need the same functionality from a class, please refer to ``Processed/ProcessSupport``.
-@propertyWrapper public struct Process<ProcessID>: DynamicProperty where ProcessID: Equatable, ProcessID: Sendable {
+@propertyWrapper public struct Process<ProcessKind>: DynamicProperty where ProcessKind: Equatable, ProcessKind: Sendable {
 
-  @SwiftUI.State private var state: ProcessState<ProcessID>
+  @SwiftUI.State private var state: ProcessState<ProcessKind>
   @SwiftUI.State private var task: Task<Void, Never>?
   
   /// The current state of the process.
   ///
   /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-5h20w``.
   /// However, doing so will cancel any ongoing task first, to prevent data races.
-  @MainActor public var wrappedValue: ProcessState<ProcessID> {
+  @MainActor public var wrappedValue: ProcessState<ProcessKind> {
     get { state }
     nonmutating set {
       cancel()
@@ -115,12 +115,12 @@ import SwiftUI
   
   /// Initializes the process with an initial state.
   /// - Parameter initialState: The initial state of the process. Defaults to `.idle`.
-  public init(wrappedValue initialState: ProcessState<ProcessID> = .idle) {
+  public init(wrappedValue initialState: ProcessState<ProcessKind> = .idle) {
     self._state = .init(initialValue: initialState)
   }
 
   /// Default initializer for `Process<SingleProcess>`.
-  public init(wrappedValue initialState: ProcessState<ProcessID> = .idle) where ProcessID == SingleProcess {
+  public init(wrappedValue initialState: ProcessState<ProcessKind> = .idle) where ProcessKind == SingleProcess {
     self._state = .init(initialValue: .idle)
   }
 
@@ -135,14 +135,14 @@ extension Process {
   /// An object providing an interface for automatic control over the loading process,
   /// through a set of easy to use methods.
   @propertyWrapper public struct Binding {
-    @SwiftUI.Binding var state: ProcessState<ProcessID>
-    @SwiftUI.Binding var task: Task<Void, Never>?
+    @SwiftUI.Binding private var state: ProcessState<ProcessKind>
+    @SwiftUI.Binding private var task: Task<Void, Never>?
     
     /// The current state of the process.
     ///
     /// It is okay to modify the state manually, instead of having it managed by a process like ``Processed/Process/Binding/run(silently:block:)-5h20w``.
     /// However, doing so will cancel any ongoing task first, to prevent data races.
-    public var wrappedValue: ProcessState<ProcessID> {
+    public var wrappedValue: ProcessState<ProcessKind> {
       get { state }
       nonmutating set {
         cancel()
@@ -187,14 +187,14 @@ extension Process {
     }
     
     public init(
-      state: SwiftUI.Binding<ProcessState<ProcessID>>,
+      state: SwiftUI.Binding<ProcessState<ProcessKind>>,
       task: SwiftUI.Binding<Task<Void, Never>?>
     ) {
       self._state = state
       self._task = task
     }
     
-    public init(_ binding: Process<ProcessID>.Binding) {
+    public init(_ binding: Process<ProcessKind>.Binding) {
       self = binding
     }
     
@@ -216,7 +216,7 @@ extension Process {
       cancel()
     }
 
-    private func setRunningStateIfNeeded(runSilently: Bool, process: ProcessID) {
+    private func prepareNewProcess(_ process: ProcessKind, runSilently: Bool) {
       if !runSilently {
         if case .running(let runningProcess) = state, runningProcess == process {} else {
           state = .running(process)
@@ -251,13 +251,13 @@ extension Process {
     ///
     /// - Returns: The task representing the process execution.
     @MainActor @discardableResult public func run(
-      _ process: ProcessID,
+      _ process: ProcessKind,
       silently runSilently: Bool = false,
       priority: TaskPriority? = nil,
       block: @MainActor @escaping () async throws -> Void
     ) -> Task<Void, Never> {
       cancel()
-      setRunningStateIfNeeded(runSilently: runSilently, process: process)
+      prepareNewProcess(process, runSilently: runSilently)
       let task = Task(priority: priority) {
         await runTaskBody(process: process, block: block)
       }
@@ -293,7 +293,7 @@ extension Process {
     /// - Returns: The task representing the process execution.
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
     @MainActor @discardableResult public func run(
-      _ process: ProcessID,
+      _ process: ProcessKind,
       silently runSilently: Bool = false,
       interrupts: [Duration],
       priority: TaskPriority? = nil,
@@ -301,7 +301,7 @@ extension Process {
       onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
     ) -> Task<Void, Never> {
       cancel()
-      setRunningStateIfNeeded(runSilently: runSilently, process: process)
+      prepareNewProcess(process, runSilently: runSilently)
       let task = Task(priority: priority) {
         await runTaskBody(
           process: process,
@@ -331,12 +331,12 @@ extension Process {
     ///   `.finished` or `.failed`, depending on the outcome of the `block` closure.
     ///   - block: The asynchronous block of code to execute.
     @MainActor public func run(
-      _ process: ProcessID,
+      _ process: ProcessKind,
       silently runSilently: Bool = false,
       block: @MainActor @escaping () async throws -> Void
     ) async {
       cancel()
-      setRunningStateIfNeeded(runSilently: runSilently, process: process)
+      prepareNewProcess(process, runSilently: runSilently)
       await runTaskBody(process: process, block: block)
     }
     
@@ -362,14 +362,14 @@ extension Process {
     ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
     @MainActor public func run(
-      _ process: ProcessID,
+      _ process: ProcessKind,
       silently runSilently: Bool = false,
       interrupts: [Duration],
       block: @MainActor @escaping () async throws -> Void,
       onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
     ) async {
       cancel()
-      setRunningStateIfNeeded(runSilently: runSilently, process: process)
+      prepareNewProcess(process, runSilently: runSilently)
       await runTaskBody(
         process: process,
         interrupts: interrupts,
@@ -401,7 +401,7 @@ extension Process {
     @MainActor @discardableResult public func run(
       silently runSilently: Bool = false,
       block: @MainActor @escaping () async throws -> Void
-    ) -> Task<Void, Never> where ProcessID == SingleProcess {
+    ) -> Task<Void, Never> where ProcessKind == SingleProcess {
       run(.init(), silently: runSilently, block: block)
     }
     
@@ -438,7 +438,7 @@ extension Process {
       priority: TaskPriority? = nil,
       block: @MainActor @escaping () async throws -> Void,
       onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
-    ) -> Task<Void, Never> where ProcessID == SingleProcess {
+    ) -> Task<Void, Never> where ProcessKind == SingleProcess {
       run(
         .init(),
         silently: runSilently,
@@ -466,7 +466,7 @@ extension Process {
     @MainActor public func run(
       silently runSilently: Bool = false,
       block: @MainActor @escaping () async throws -> Void
-    ) async where ProcessID == SingleProcess {
+    ) async where ProcessKind == SingleProcess {
       await run(.init(), silently: runSilently, block: block)
     }
     
@@ -497,14 +497,14 @@ extension Process {
       interrupts: [Duration],
       block: @MainActor @escaping () async throws -> Void,
       onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
-    ) async where ProcessID == SingleProcess {
+    ) async where ProcessKind == SingleProcess {
       await run(.init(), silently: runSilently, interrupts: interrupts, block: block, onInterrupt: onInterrupt)
     }
     
     // MARK: - Internal
     
     @MainActor private func runTaskBody(
-      process: ProcessID,
+      process: ProcessKind,
       block: @MainActor @escaping () async throws -> Void
     ) async {
       do {
@@ -523,7 +523,7 @@ extension Process {
     
     @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
     @MainActor private func runTaskBody(
-      process: ProcessID,
+      process: ProcessKind,
       interrupts: [Duration],
       block: @MainActor @escaping () async throws -> Void,
       onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void

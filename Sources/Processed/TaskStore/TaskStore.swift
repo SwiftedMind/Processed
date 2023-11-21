@@ -27,8 +27,8 @@ import Foundation
 
   var tasks: [ProcessIdentifier: Task<Void, Never>] = [:]
 
-  func identifier<Object: ProcessSupport, ProcessID: Equatable>(
-    for processState: ReferenceWritableKeyPath<Object, ProcessState<ProcessID>>,
+  func identifier<Object: ProcessSupport, ProcessKind: Equatable>(
+    for processState: ReferenceWritableKeyPath<Object, ProcessState<ProcessKind>>,
     in type: Object
   ) -> ProcessIdentifier {
     ProcessIdentifier(

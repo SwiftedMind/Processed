@@ -10,6 +10,8 @@
 
 **New** - The closures passed to the `run` methods of the  `ProcessSupport` protocol are now isolated to the `MainActor`
 
+**New** - Added `@TaskIdentifier` property wrapper, which is a convenience wrapper around a `UUID` SwiftUI state that helps with task restarts, e.g. `.task(id: taskIdentifier) { ... }`
+
 **New** -  Reworked the demo app and fixed a few bugs and issues
 
 **New** -  The demo app now has more examples; for example `Restartable Loadable`, `Refreshable Loadable`, `Process Interrrupts` and `Loadable Interrupts`
@@ -17,6 +19,8 @@
 **New** -  Added error types `ResetProcess` and `ResetLoadable` that can be thrown to reset a process or loadable
 
 **New** - Added typealias `typealias SingleProcessState = ProcessState<SingleProcess>` for convenience
+
+**Changed** - Renamed generic process type `ProcessID` to `ProcessKind` to better communicate its purpose. This should not affect your code at all. 
 
 **Fixed** - Removed redundancies in the `ProcessSupport` protocol code to simplify implementation
 

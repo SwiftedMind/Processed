@@ -74,12 +74,12 @@ public protocol ProcessSupport: AnyObject {
   /// Cancels the task of an ongoing process.
   ///
   /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
-  @MainActor func cancel<ProcessID: Equatable>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>)
+  @MainActor func cancel<ProcessKind: Equatable>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>)
 
   /// Cancels the task of an ongoing process and resets the state to `.idle`.
   ///
   /// - Note: You are responsible for cooperating with the task cancellation within the process closures.
-  @MainActor func reset<ProcessID: Equatable>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>)
+  @MainActor func reset<ProcessKind: Equatable>(_ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>)
 
   /// Starts a process in a new `Task`, waiting for a return value or thrown error from the
   /// `block` closure, while setting the ``Processed/ProcessState`` accordingly.
@@ -98,9 +98,9 @@ public protocol ProcessSupport: AnyObject {
   ///   - block: The asynchronous block of code to execute.
   ///
   /// - Returns: The task representing the process execution.
-  @MainActor @discardableResult func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor @discardableResult func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool,
     priority: TaskPriority?,
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
@@ -130,9 +130,9 @@ public protocol ProcessSupport: AnyObject {
   ///
   /// - Returns: The task representing the process execution.
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-  @MainActor @discardableResult func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor @discardableResult func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool,
     interrupts: [Duration],
     priority: TaskPriority?,
@@ -156,9 +156,9 @@ public protocol ProcessSupport: AnyObject {
   ///   - process: The process to run.
   ///   - runSilently: If set to `true`, the `.running` state will be skipped and the process will directly go to either `.finished` or `.failed`, depending on the outcome of the `block` closure.
   ///   - block: The asynchronous block of code to execute.
-  @MainActor func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool,
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async
@@ -186,9 +186,9 @@ public protocol ProcessSupport: AnyObject {
   ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
   ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-  @MainActor func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool,
     interrupts: [Duration],
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
@@ -308,16 +308,16 @@ public protocol ProcessSupport: AnyObject {
 
 extension ProcessSupport {
   
-  @MainActor public func cancel<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>
+  @MainActor public func cancel<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>
   ) {
     let identifier = TaskStore.shared.identifier(for: processState, in: self)
     TaskStore.shared.tasks[identifier]?.cancel()
     TaskStore.shared.tasks.removeValue(forKey: identifier)
   }
 
-  @MainActor public func reset<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>
+  @MainActor public func reset<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>
   ) {
     if case .idle = self[keyPath: processState] {
     } else {
@@ -326,9 +326,9 @@ extension ProcessSupport {
     cancel(processState)
   }
 
-  @MainActor @discardableResult public func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor @discardableResult public func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool = false,
     priority: TaskPriority? = nil,
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
@@ -350,9 +350,9 @@ extension ProcessSupport {
   }
   
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-  @MainActor @discardableResult public func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor @discardableResult public func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool = false,
     interrupts: [Duration],
     priority: TaskPriority? = nil,
@@ -377,9 +377,9 @@ extension ProcessSupport {
     return TaskStore.shared.tasks[identifier]!
   }
   
-  @MainActor public func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor public func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool = false,
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async {
@@ -388,9 +388,9 @@ extension ProcessSupport {
   }
   
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-  @MainActor public func run<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    as process: ProcessID,
+  @MainActor public func run<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    as process: ProcessKind,
     silently runSilently: Bool = false,
     interrupts: [Duration],
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
@@ -473,9 +473,9 @@ extension ProcessSupport {
     )
   }
 
-  @MainActor private func runTaskBody<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    process: ProcessID,
+  @MainActor private func runTaskBody<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    process: ProcessKind,
     silently runSilently: Bool = false,
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
   ) async {
@@ -494,9 +494,9 @@ extension ProcessSupport {
   }
 
   @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-  @MainActor private func runTaskBody<ProcessID: Equatable>(
-    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    process: ProcessID,
+  @MainActor private func runTaskBody<ProcessKind: Equatable>(
+    _ processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    process: ProcessKind,
     silently runSilently: Bool = false,
     interrupts: [Duration],
     @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
@@ -541,9 +541,9 @@ extension ProcessSupport {
     }
   }
 
-  @MainActor private func setRunningStateIfNeeded<ProcessID: Equatable>(
-    on processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessID>>,
-    process: ProcessID,
+  @MainActor private func setRunningStateIfNeeded<ProcessKind: Equatable>(
+    on processState: ReferenceWritableKeyPath<Self, ProcessState<ProcessKind>>,
+    process: ProcessKind,
     runSilently: Bool
   ) {
     if !runSilently {

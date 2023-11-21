@@ -23,23 +23,23 @@
 import Foundation
 
 /// An enumeration representing the possible states of a process.
-public enum ProcessState<ProcessID> {
+public enum ProcessState<ProcessKind> {
 
   /// Represents the state where the process is currently not running and has no result or error.
   case idle
 
   /// Represents the state where the process is currently running.
-  /// - Parameter ProcessID: The process that is running.
-  case running(ProcessID)
+  /// - Parameter ProcessKind: The process that is running.
+  case running(ProcessKind)
 
   /// Represents the state where the process has finished with an error.
   /// - Parameter process: The process that has thrown an error.
   /// - Parameter error: The thrown error.
-  case failed(process: ProcessID, error: Swift.Error)
+  case failed(process: ProcessKind, error: Swift.Error)
 
   /// Represents the state where the process has finished successfully.
   /// - Parameter process: The process that has finished.
-  case finished(ProcessID)
+  case finished(ProcessKind)
 }
 
 /// A convenience typealias for a `ProcessState` with the generic type of `SingleProcess`
@@ -66,12 +66,12 @@ extension ProcessState {
   
   /// Starts running the specified process.
   /// - Parameter process: The process to start running.
-  public mutating func start(_ process: ProcessID) {
+  public mutating func start(_ process: ProcessKind) {
     self = .running(process)
   }
   
   /// Starts running a new unique process.
-  public mutating func start() where ProcessID == SingleProcess {
+  public mutating func start() where ProcessKind == SingleProcess {
     start(.init())
   }
   
@@ -108,12 +108,12 @@ extension ProcessState {
   /// Sets the state to `running` with the given process.
   /// - Parameters:
   ///   - process: The process that is running.
-  public mutating func setRunning(_ process: ProcessID) {
+  public mutating func setRunning(_ process: ProcessKind) {
     self = .running(process)
   }
   
   /// Sets the state to `running`.
-  public mutating func setRunning() where ProcessID == SingleProcess {
+  public mutating func setRunning() where ProcessKind == SingleProcess {
     self = .running(.init())
   }
   
@@ -121,26 +121,26 @@ extension ProcessState {
   /// - Parameters:
   ///   - process: The process that failed.
   ///   - error: The error causing the failure.
-  public mutating func setFailed(_ process: ProcessID, error: Swift.Error) {
+  public mutating func setFailed(_ process: ProcessKind, error: Swift.Error) {
     self = .failed(process: process, error: error)
   }
 
   /// Sets the process state to `.failed`.
   /// - Parameters:
   ///   - error: The error causing the failure.
-  public mutating func setFailed(with error: Swift.Error) where ProcessID == SingleProcess {
+  public mutating func setFailed(with error: Swift.Error) where ProcessKind == SingleProcess {
     self = .failed(process: .init(), error: error)
   }
 
   /// Sets the process state to `.finished` with the given process.
   /// - Parameters:
   ///   - process: The process that finished.
-  public mutating func setFinished(_ process: ProcessID) {
+  public mutating func setFinished(_ process: ProcessKind) {
     self = .finished(process)
   }
   
   /// Sets the process state to `.finished`.
-  public mutating func setFinished() where ProcessID == SingleProcess {
+  public mutating func setFinished() where ProcessKind == SingleProcess {
     self = .finished(.init())
   }
   
@@ -161,7 +161,7 @@ extension ProcessState {
   /// A Boolean value indicating whether the state is `running` with the given process.
   /// - Parameter process: The process to check against.
   /// - Returns: A boolean.
-  public func isRunning(_ process: ProcessID) -> Bool where ProcessID: Equatable {
+  public func isRunning(_ process: ProcessKind) -> Bool where ProcessKind: Equatable {
     if case .running(let runningProcess) = self { return runningProcess == process }
     return false
   }
@@ -175,7 +175,7 @@ extension ProcessState {
   /// A Boolean value indicating whether the state is `failed` with the given process.
   /// - Parameter process: The process to check against.
   /// - Returns: A boolean.
-  public func hasFailed(_ process: ProcessID) -> Bool where ProcessID: Equatable {
+  public func hasFailed(_ process: ProcessKind) -> Bool where ProcessKind: Equatable {
     if case .failed(let failedProcess, _) = self { return failedProcess == process }
     return false
   }
@@ -189,13 +189,13 @@ extension ProcessState {
   /// A Boolean value indicating whether the state is `finished` with the given process.
   /// - Parameter process: The process to check against.
   /// - Returns: A boolean.
-  public func hasFinished(_ process: ProcessID) -> Bool where ProcessID: Equatable {
+  public func hasFinished(_ process: ProcessKind) -> Bool where ProcessKind: Equatable {
     if case .finished(let finishedProcess) = self { return finishedProcess == process }
     return false
   }
 
   /// The current process if the state is `running`, `failed` or `finished`, and `nil` otherwise.
-  public var process: ProcessID? {
+  public var process: ProcessKind? {
     switch self {
     case .idle: return nil
     case .running(let process): return process
@@ -211,8 +211,8 @@ extension ProcessState {
   }
 }
 
-extension ProcessState: Sendable where ProcessID: Sendable {}
-extension ProcessState: Equatable where ProcessID: Equatable {
+extension ProcessState: Sendable where ProcessKind: Sendable {}
+extension ProcessState: Equatable where ProcessKind: Equatable {
   nonisolated public static func == (lhs: ProcessState, rhs: ProcessState) -> Bool {
     switch (lhs, rhs) {
     case (.idle, .idle): return true

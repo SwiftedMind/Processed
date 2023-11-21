@@ -293,11 +293,11 @@ However, it's still really easy: You have to conform your class to the `Loadable
 Processed also defines a `ProcessState` enum that can be used to represent the state of a generic process, like logging in, saving something or a deletion. Just as `LoadableState`, it comes with a lot of handy properties and methods, like `.isRunning`, `.setFinished()`, `.error`, etc.
 
 ```swift
-enum ProcessState<ProcessID> {
+enum ProcessState<ProcessKind> {
   case idle
-  case running(ProcessID)
-  case failed(process: ProcessID, error: Swift.Error)
-  case finished(ProcessID)
+  case running(ProcessKind)
+  case failed(process: ProcessKind, error: Swift.Error)
+  case finished(ProcessKind)
 }
 ```
 
@@ -348,7 +348,7 @@ Here, the call to  `$saveData.run { ... }`  does a few things, pretty much ident
 
 Everything is hidden behind this one simple call, so that you can just focus on actually loading the data.
 
-You can also manage multiple kinds of processes through the same state. This is useful if you have multiple processes that don't run in parallel. In the example above, the generic parameter of the `ProcessState` enum is automatically inferred to be `SingleProcess`, which is a helper type to make it easier to work with processes that only have a single purpose. Specifying your own `ProcessID` is really easy, too! Let's modify the example slightly by adding a deletion option:
+You can also manage multiple kinds of processes through the same state. This is useful if you have multiple processes that don't run in parallel. In the example above, the generic parameter of the `ProcessState` enum is automatically inferred to be `SingleProcess`, which is a helper type to make it easier to work with processes that only have a single purpose. Specifying your own `ProcessKind` is really easy, too! Let's modify the example slightly by adding a deletion option:
 
 ```swift
 enum ProcessKind {

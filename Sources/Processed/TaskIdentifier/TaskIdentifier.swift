@@ -20,35 +20,42 @@
 //  SOFTWARE.
 //
 
-@testable import Processed
 import SwiftUI
 
-@MainActor final class ProcessContainer<ProcessKind>: ProcessSupport {
+@propertyWrapper public struct TaskIdentifier<ID>: DynamicProperty where ID: Equatable {
+  @State private var id: ID
   
-  private(set) var processHistory: [ProcessState<ProcessKind>]
-  var task: Task<Void, Never>?
-  var process: ProcessState<ProcessKind> {
-    didSet { processHistory.append(process) }
+  public var wrappedValue: ID {
+    id
   }
   
-  init(initialState: ProcessState<ProcessKind> = .idle) {
-    self.process = initialState
-    self.processHistory = [process]
+  public var projectedValue: Access {
+    .init(id: $id)
   }
   
-  var taskBinding: Binding<Task<Void, Never>?> {
-    .init {
-      self.task
-    } set: { newValue in
-      self.task = newValue
+  public init(wrappedValue: ID) {
+    self._id = .init(initialValue: wrappedValue)
+  }
+  
+  public init() where ID == UUID {
+    self._id = .init(initialValue: .init())
+  }
+}
+
+extension TaskIdentifier {
+  public struct Access {
+    @Binding var id: ID
+    
+    fileprivate init(id: Binding<ID>) {
+      self._id = id
     }
-  }
-  
-  var processBinding: Binding<ProcessState<ProcessKind>> {
-    .init {
-      self.process
-    } set: { newValue in
-      self.process = newValue
+    
+    public func update(with newId: ID) {
+      id = newId
+    }
+    
+    public func update() where ID == UUID {
+      id = .init()
     }
   }
 }
