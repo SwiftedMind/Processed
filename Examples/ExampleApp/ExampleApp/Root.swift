@@ -27,10 +27,12 @@ struct Root: View {
 
   enum ProcessDemoDestination: Hashable {
     case simpleProcess
+    case failureAlertProcess
     case sharedProcess
     case interrupts
     case interruptsInClass
     case simpleProcessInClass
+    case failureAlertProcessInClass
     case sharedProcessInClass
   }
   
@@ -60,6 +62,8 @@ struct Root: View {
         switch destination {
         case .simpleProcess:
           SimpleProcessDemo()
+        case .failureAlertProcess:
+          FailureAlertProcessDemo()
         case .sharedProcess:
           SharedProcessDemo()
         case .interrupts:
@@ -68,6 +72,8 @@ struct Root: View {
           ProcessInterruptsInClassDemo()
         case .simpleProcessInClass:
           SimpleProcessInClassDemo()
+        case .failureAlertProcessInClass:
+          FailureAlertProcessInClassDemo()
         case .sharedProcessInClass:
           SharedProcessInClassDemo()
         }
@@ -128,6 +134,9 @@ struct Root: View {
       NavigationLink(value: ProcessDemoDestination.simpleProcess) {
         Text("Simple Process")
       }
+      NavigationLink(value: ProcessDemoDestination.failureAlertProcess) {
+        Text("Failure Alert Process")
+      }
       NavigationLink(value: ProcessDemoDestination.sharedProcess) {
         Text("Shared Process")
       }
@@ -172,6 +181,9 @@ struct Root: View {
     Section {
       NavigationLink(value: ProcessDemoDestination.simpleProcessInClass) {
         Text("Simple Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.failureAlertProcessInClass) {
+        Text("Failure Alert Process")
       }
       NavigationLink(value: ProcessDemoDestination.sharedProcessInClass) {
         Text("Shared Process")

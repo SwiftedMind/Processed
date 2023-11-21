@@ -14,7 +14,7 @@
 
 **New** -  Reworked the demo app and fixed a few bugs and issues
 
-**New** -  The demo app now has more examples; for example `Restartable Loadable`, `Refreshable Loadable`, `Process Interrrupts` and `Loadable Interrupts`
+**New** -  The demo app now has more examples: `Restartable Loadable`, `Refreshable Loadable`, `Process Interrrupts`, `Loadable Interrupts` and `Failure Alert Process`
 
 **New** -  Added error types `ResetProcess` and `ResetLoadable` that can be thrown to reset a process or loadable
 
