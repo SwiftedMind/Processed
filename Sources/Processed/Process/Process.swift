@@ -186,6 +186,11 @@ extension Process {
       self
     }
     
+    // A binding to the underlying `ProcessState`.
+    public var binding: SwiftUI.Binding<ProcessState<ProcessKind>> {
+      $state
+    }
+    
     public init(
       state: SwiftUI.Binding<ProcessState<ProcessKind>>,
       task: SwiftUI.Binding<Task<Void, Never>?>
@@ -509,6 +514,7 @@ extension Process {
     ) async {
       do {
         try await block()
+        try Task.checkCancellation()
         state = .finished(process)
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
@@ -533,6 +539,7 @@ extension Process {
           
           group.addTask {
             try await block()
+            try Task.checkCancellation()
             state = .finished(process)
           }
           

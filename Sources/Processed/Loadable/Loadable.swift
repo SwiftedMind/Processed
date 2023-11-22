@@ -149,6 +149,11 @@ extension Loadable {
     public var projectedValue: Binding {
       self
     }
+    
+    // A binding to the underlying `LoadableState`.
+    public var binding: SwiftUI.Binding<LoadableState<Value>> {
+      $state
+    }
 
     /// An object providing an interface for automatic control over the loading process,
     /// through a set of easy to use methods.
@@ -529,7 +534,9 @@ extension Loadable {
       block: @MainActor @escaping () async throws -> Value
     ) async {
       do {
-        state = try await .loaded(block())
+        let result = try await block()
+        try Task.checkCancellation()
+        state = .loaded(result)
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
       } catch is CancelLoadable {
@@ -550,7 +557,9 @@ extension Loadable {
       do {
         try await withThrowingTaskGroup(of: Void.self) { group in
           group.addTask {
-            state = try await .loaded(block())
+            let result = try await block()
+            try Task.checkCancellation()
+            state = .loaded(result)
           }
           
           group.addTask {
