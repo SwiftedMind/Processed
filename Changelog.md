@@ -2,7 +2,7 @@
 ## 2.0.0
 
 > [!Warning]
-> This is a release that introduces breaking changes, due to a few unfortunate bugs in 1.0.0. The migration process should not be complicated, though. You can read more about it in the [migration guide](Migration.md)
+> This is a release that introduces breaking changes, due to a few unfortunate bugs in 1.0.0. The migration process should not be complicated, though. You can read more about it in the [migration guide](Migration.md).
 
 ### New
 
