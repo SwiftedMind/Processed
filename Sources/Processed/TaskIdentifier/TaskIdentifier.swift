@@ -22,39 +22,85 @@
 
 import SwiftUI
 
+/// A property wrapper that provides a unique identifier for SwiftUI tasks.
+///
+/// `TaskIdentifier` is used to associate a specific ID with a SwiftUI task,
+/// allowing the task to be identified or restarted based on changes of that ID.
+/// It can be particularly useful for controlling task execution in response to state changes.
+///
+/// Usage:
+///
+/// ```swift
+/// @TaskIdentifier var identifier
+/// var body: some View {
+///   Text("My View")
+///     .task(id: identifier) { /* Do work */ } // Restarts when the identifier changes
+/// }
+///
+/// func restart() {
+///   $identifier.new()
+/// }
+/// ```
+///
+/// You can provide a custom type for the id by specifying it:
+///
+/// ```swift
+/// @TaskIdentifier<String> var identifier
+/// $identifier.new("New ID")
+/// ```
+///
+/// - Parameter ID: The type of the identifier. This will default to `UUID`.
 @propertyWrapper public struct TaskIdentifier<ID>: DynamicProperty where ID: Equatable {
+  
+  /// The underlying identifier value.
   @State private var id: ID
   
+  /// The current value of the identifier.
   public var wrappedValue: ID {
     id
   }
   
+  /// Provides access to methods for manipulating the identifier.
   public var projectedValue: Access {
     .init(id: $id)
   }
   
+  /// Initializes a new instance with the provided identifier value.
+  ///
+  /// - Parameter wrappedValue: The initial identifier value.
   public init(wrappedValue: ID) {
     self._id = .init(initialValue: wrappedValue)
   }
   
+  /// Initializes a new instance with a UUID identifier.
   public init() where ID == UUID {
     self._id = .init(initialValue: .init())
   }
 }
 
 extension TaskIdentifier {
+  /// A structure providing methods to manipulate the `TaskIdentifier` value.
   public struct Access {
+    
+    /// The binding to the underlying identifier.
     @Binding var id: ID
     
+    /// Creates a new `Access` instance.
+    ///
+    /// - Parameter id: A binding to the identifier value.
     fileprivate init(id: Binding<ID>) {
       self._id = id
     }
     
-    public func update(with newId: ID) {
+    /// Updates the identifier to a new value.
+    ///
+    /// - Parameter newId: The new identifier value.
+    public func new(_ newId: ID) {
       id = newId
     }
     
-    public func update() where ID == UUID {
+    /// Resets the identifier to a new `UUID`.
+    public func new() where ID == UUID {
       id = .init()
     }
   }

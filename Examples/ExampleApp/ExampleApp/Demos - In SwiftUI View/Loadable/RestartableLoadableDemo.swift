@@ -26,7 +26,7 @@ import Processed
 struct RestartableLoadableDemo: View {
 
   // An id that can be used to restart the task that runs the continuous observation
-  @State var numbersObservationId: UUID = .init()
+  @TaskIdentifier var numbersObservationId
   @State var shouldFail: Bool = false
   @Loadable var numbers: LoadableState<[Int]>
 
@@ -70,7 +70,7 @@ struct RestartableLoadableDemo: View {
         Text("An error occurred")
         Button("Retry") {
           // Restart the stream
-          numbersObservationId = .init()
+          $numbersObservationId.new()
         }
         .buttonStyle(.borderedProminent)
       }
