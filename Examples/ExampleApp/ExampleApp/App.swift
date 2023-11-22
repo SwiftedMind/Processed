@@ -30,3 +30,7 @@ struct ExampleApp: App {
     }
   }
 }
+
+#Preview {
+  Root().preferredColorScheme(.dark)
+}

@@ -19,14 +19,36 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 import Foundation
 
-/// An error indicating that s process has been cancelled.
+/// An error indicating that the loadable process has been cancelled.
 public struct CancelLoadable: Error, Sendable, Hashable {
   public init() {}
 }
 
-/// An error indicating that s process has been cancelled.
+/// An error indicating that the loadable process has been marked to be reset.
+public struct ResetLoadable: Error, Sendable, Hashable {
+  public init() {}
+}
+
+/// An error indicating that the process has been cancelled.
 public struct CancelProcess: Error, Sendable, Hashable {
   public init() {}
+}
+
+/// An error indicating that the process has been marked to be reset.
+public struct ResetProcess: Error, Sendable, Hashable {
+  public init() {}
+}
+
+/// An error indicating that a task has timed out.
+public struct TimeoutError: Error, Sendable, Hashable {
+  public init() {}
+}
+
+// MARK: - Internal
+
+struct InterruptionsDoneError: Error, Sendable, Hashable {
+  init() {}
 }

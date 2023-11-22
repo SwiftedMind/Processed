@@ -23,76 +23,77 @@
 import SwiftUI
 import Processed
 
-struct RestartableDemo: View {
-
-  // An id that can be used to restart the task that runs the continuous observation
-  @State var numbersObservationId: UUID = .init()
-  @State var shouldFail: Bool = false
+struct BasicLoadableDemo: View {
+  
   @Loadable var numbers: LoadableState<[Int]>
-
+  
   var body: some View {
     List {
       buttons
       loadableState
     }
     .animation(.default, value: numbers)
-    .navigationTitle("Restartable Demo")
+    .navigationTitle("Basic Loadable")
     .navigationBarTitleDisplayMode(.inline)
-    .task(id: numbersObservationId) {
-      // This task will cancel when the view disappears and restart if numbersObservationId changes
-      await stream()
+    .onDisappear {
+      $numbers.cancel()
     }
   }
-
+  
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Simulate stream error", role: .cancel) {
-        shouldFail = true
+      Button("Load all numbers") {
+        load()
       }
-    } footer: {
-      Text("Tap here to interrupt the loading stream and simulate an error case so you can test a restart")
+      Button("Stream numbers") {
+        stream()
+      }
+    }
+    
+    Section {
+      Button("Cancel") {
+        // Cancel the current loading process and keep the state where it currently is
+        // so that you can start a new process without introducing data races
+        $numbers.cancel()
+      }
+      Button("Reset") {
+        // Cancel the current loading process and reset the state to .absent
+        $numbers.reset()
+      }
     }
   }
-
+  
   @ViewBuilder @MainActor
   private var loadableState: some View {
     switch numbers {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
+      ProgressView().id(UUID())
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
-    case .error:
-      VStack {
-        Text("An error occurred")
-        Button("Retry") {
-          // Restart the stream
-          numbersObservationId = .init()
-        }
-        .buttonStyle(.borderedProminent)
-      }
-      .frame(maxWidth: .infinity)
-      .padding(.vertical)
+    case .error(let error):
+      Text("An error occurred: \(error.localizedDescription)")
     case .loaded(let numbers):
       ForEach(numbers, id: \.self) { number in
         Text(String(number))
       }
     }
   }
-
-  @MainActor func stream() async {
-    await $numbers.load { yield in
+  
+  @MainActor func load() {
+    $numbers.load {
+      try await Task.sleep(for: .seconds(2))
+      return [1, 2, 3, 4, 5]
+    }
+  }
+  
+  @MainActor func stream() {
+    $numbers.load { yield in
       var numbers: [Int] = []
-      for await number in (1...100).publisher.values {
+      for await number in [1, 2, 3, 4, 5].publisher.values {
         try await Task.sleep(for: .seconds(1))
-
-        if shouldFail {
-          shouldFail = false // Reset
-          throw NSError(domain: "", code: 42)
-        }
-
         numbers.append(number)
         yield(.loaded(numbers))
       }
@@ -103,7 +104,7 @@ struct RestartableDemo: View {
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      RestartableDemo().preferredColorScheme(.dark)
+      BasicLoadableDemo().preferredColorScheme(.dark)
     }
   }
 }

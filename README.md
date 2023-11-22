@@ -1,8 +1,4 @@
-
-
-<p align="center">
-  <img width="200" height="200" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
-</p>
+<img width="100" height="100" src="https://github.com/SwiftedMind/Processed/assets/7083109/39b3e3cc-b866-4afc-8f9a-8aa5df4392ec">
 
 # Processed
 
@@ -11,7 +7,7 @@
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FSwiftedMind%2FProcessed%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/SwiftedMind/Processed)
 ![GitHub](https://img.shields.io/github/license/SwiftedMind/Processed)
 
-Processed is a lightweight wrapper around the handling of loading states in SwiftUI, reducing repetitive boilerplate code and improving code readability. It works in SwiftUI views via two property wrappers (`@Loadable` and `@Process`) as well as in arbitrary classes using the `LoadableSupport` and `ProcessSupport` protocols. It also supports full manual state control for situations where the defaults don't work as needed.
+Processed is a lightweight, automatic loading state handler for SwiftUI, reducing repetitive boilerplate code and improving code readability. It works in views via two property wrappers (`@Loadable` and `@Process`) as well as in arbitrary classes using the `LoadableSupport` and `ProcessSupport` protocols. It also supports full manual state control for situations where the defaults don't work as needed.
 
 ```swift
 struct DemoView: View {
@@ -48,14 +44,17 @@ struct DemoView: View {
 
 ## Content
 
-- [Installation](#installation)
-- [Documentation](#documentation)
-- [Background](#background)
-- **[Get Started](#get-started)**
-	- [LoadableState](#loadablestate)
- 	- [ProcessState](#processstate)
-- [Example Apps](#example-apps)
-- [License](#license)
+1. [Installation](#installation)
+2. [Documentation](#documentation)
+3. [Background](#background)
+4. **[Loadable](#loadable)**
+	- [Loadable in Classes](#use-processstate-in-classes)
+5. **[Process](#process)**
+	- [Process in Classes](#use-loadablestate-in-classes)
+6. [Advanced Features](#advanced-features)
+	- [Interrupts](#interrupts)
+7. [Examples](#examples)
+8. [License](#license)
 
 ## Installation
 
@@ -66,7 +65,7 @@ Processed supports iOS 15+, macOS 13+, watchOS 8+ and tvOS 15+ and visionOS 1+.
 Add the following line to the dependencies in your `Package.swift` file:
 
 ```swift
-.package(url: "https://github.com/SwiftedMind/Processed", from: "1.0.0")
+.package(url: "https://github.com/SwiftedMind/Processed", from: "2.0.0")
 ```
 
 ### Xcode project
@@ -148,9 +147,7 @@ The interesting thing here is that almost everything inside the method is boiler
 
 And that's exactly what Processed helps with. It hides that boilerplate behind a set of easy to use types and property wrappers. Let's have a look at how it works.
 
-## Get Started
-
-### LoadableState
+### Loadable
 
 Processed defines a `LoadableState` enum that can be used to represent the loading state of some data. It also comes with a lot of handy properties and methods, like `.isLoading`, `.setLoading()`, `.data` etc.
 
@@ -249,6 +246,9 @@ $numbers.reset() // Cancel internal Task and reset state to .absent
 
 // Throw this in the `load` closure, to cancel a loading process from the inside:
 throw CancelLoadable()
+
+// Throw this in the `load` closure, to reset a loading process from the inside:
+throw ResetLoadable()
 ```
 
 #### Use `LoadableState` in Classes
@@ -288,16 +288,16 @@ However, it's still really easy: You have to conform your class to the `Loadable
 }
 ```
 
-### ProcessState
+### Process
 
 Processed also defines a `ProcessState` enum that can be used to represent the state of a generic process, like logging in, saving something or a deletion. Just as `LoadableState`, it comes with a lot of handy properties and methods, like `.isRunning`, `.setFinished()`, `.error`, etc.
 
 ```swift
-enum ProcessState<ProcessID> {
+enum ProcessState<ProcessKind> {
   case idle
-  case running(ProcessID)
-  case failed(process: ProcessID, error: Swift.Error)
-  case finished(ProcessID)
+  case running(ProcessKind)
+  case failed(process: ProcessKind, error: Swift.Error)
+  case finished(ProcessKind)
 }
 ```
 
@@ -348,7 +348,7 @@ Here, the call to  `$saveData.run { ... }`  does a few things, pretty much ident
 
 Everything is hidden behind this one simple call, so that you can just focus on actually loading the data.
 
-You can also manage multiple kinds of processes through the same state. This is useful if you have multiple processes that don't run in parallel. In the example above, the generic parameter of the `ProcessState` enum is automatically inferred to be `SingleProcess`, which is a helper type to make it easier to work with processes that only have a single purpose. Specifying your own `ProcessID` is really easy, too! Let's modify the example slightly by adding a deletion option:
+You can also manage multiple kinds of processes through the same state. This is useful if you have multiple processes that don't run in parallel. In the example above, the generic parameter of the `ProcessState` enum is automatically inferred to be `SingleProcess`, which is a helper type to make it easier to work with processes that only have a single purpose. Specifying your own `ProcessKind` is really easy, too! Let's modify the example slightly by adding a deletion option:
 
 ```swift
 enum ProcessKind {
@@ -406,6 +406,9 @@ $process.reset() // Cancel internal Task and reset state to .absent
 
 // Throw this in the `run` closure, to cancel a process from the inside:
 throw CancelProcess()
+
+// Throw this in the `run` closure, to reset a process from the inside:
+throw ResetProcess()
 ```
 
 #### Use `ProcessState` in Classes
@@ -442,9 +445,38 @@ enum  ProcessKind {
 }
 ```
 
-## Example Apps
+## Advanced Features
 
-You can find an example app in the [Examples](https://github.com/SwiftedMind/Processed/tree/main/Examples) folder of this repository.
+### Interrupts
+
+All of the `load` and `run` methods from above have overloads to add something called "interrupts". An interrupt is a closure that is called in parallel, during the (loading) process, allowing you to run logic based on how long that process takes. This makes it easy to add a timeout when the process takes too long or fade in a view that says "Loading takes a bit longer than expected". Here is an example:
+
+```swift
+@Loadable var numbers: LoadableState<[Int]>
+@State var showLoadingDelay = false
+// ...
+@MainActor func loadWithTimeout() {
+ $numbers.load(interrupts: [.seconds(2), .seconds(3)]) {
+  try await Task.sleep(for: .seconds(10))
+  return [42]
+ } onInterrupt: { accumulatedDelay in
+  switch accumulatedDelay {
+  case .seconds(5):
+   throw TimeoutError()
+  default:
+   showLoadingDelay = true
+  }
+ }
+}
+```
+
+## Examples
+
+You can find a demo project in the [Examples](https://github.com/SwiftedMind/Processed/tree/main/Examples) folder of this repository. In there, you will find a selection of examples and demonstrations you can use to get started.
+
+| App  | Simple Process Demo | Basic Loadable Demo |
+| ------------- | ------------- | ------------- |
+| ![RocketSim_Screenshot_iPhone_15_Pro_2023-11-21_23 05 12](https://github.com/SwiftedMind/Processed/assets/7083109/efdbc741-77a4-44cd-a4aa-e1ebeff3042b) | ![RocketSim_Screenshot_iPhone_15_Pro_2023-11-21_23 05 23](https://github.com/SwiftedMind/Processed/assets/7083109/5f7e4971-44b9-453e-ad4a-caefa2680860) | ![RocketSim_Screenshot_iPhone_15_Pro_2023-11-21_23 05 36](https://github.com/SwiftedMind/Processed/assets/7083109/9a418c27-4c05-4c6c-9dba-b8b89502efed) |
 
 ## License
 

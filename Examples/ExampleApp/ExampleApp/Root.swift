@@ -25,80 +25,77 @@ import Processed
 
 struct Root: View {
 
-  enum Destination: Hashable {
-    case singleProcess
+  enum ProcessDemoDestination: Hashable {
+    case simpleProcess
+    case failureAlertProcess
     case sharedProcess
-    case loadable
+    case interrupts
+    case interruptsInClass
+    case simpleProcessInClass
+    case failureAlertProcessInClass
+    case sharedProcessInClass
+  }
+  
+  enum LoadableDemoDestination: Hashable {
+    case basic
     case restartable
     case refreshable
-    case singleProcessInClass
-    case sharedProcessInClass
-    case loadableInClass
+    case interrupts
+    case basicInClass
+    case interruptsInClass
+    case restartableInClass
+    case refreshableInClass
   }
 
-  @State var path: [Destination] = []
+  @State var path = NavigationPath()
 
   var body: some View {
     NavigationStack(path: $path) {
       List {
         header
-        Section {
-          NavigationLink(value: Destination.singleProcess) {
-            Text("Single process")
-          }
-          NavigationLink(value: Destination.sharedProcess) {
-            Text("Shared process")
-          }
-          NavigationLink(value: Destination.loadable) {
-            Text("Loadable")
-          }
-          NavigationLink(value: Destination.restartable) {
-            Text("Restartable Loadable")
-          }
-          NavigationLink(value: Destination.restartable) {
-            Text("Refreshable Loadable")
-          }
-        } header: {
-          Text("SwiftUI View Demos")
-        } footer: {
-          Text("See how you can use the `@Loadable` and `@Process` property wrappers directly in your views.")
-        }
-        Section {
-          NavigationLink(value: Destination.singleProcessInClass) {
-            Text("Single process in class")
-          }
-          NavigationLink(value: Destination.sharedProcessInClass) {
-            Text("Shared process in class")
-          }
-          NavigationLink(value: Destination.loadableInClass) {
-            Text("Loadable in class")
-          }
-        } header: {
-          Text("Class Demos")
-        } footer: {
-          Text("See how you can use `LoadableSupport` and `ProcessSupport` in an `ObservableObject` or any other class.")
-        }
+        propertyWrapperDemos
+        protocolDemos
       }
       .navigationTitle("Demos")
       .navigationBarTitleDisplayMode(.inline)
-      .navigationDestination(for: Destination.self) { destination in
+      .navigationDestination(for: ProcessDemoDestination.self) { destination in
         switch destination {
-        case .singleProcess:
-          SingleProcessDemo()
+        case .simpleProcess:
+          SimpleProcessDemo()
+        case .failureAlertProcess:
+          FailureAlertProcessDemo()
         case .sharedProcess:
           SharedProcessDemo()
-        case .loadable:
-          LoadableDemo()
-        case .restartable:
-          RestartableDemo()
-        case .refreshable:
-          RefreshableDemo()
-        case .singleProcessInClass:
-          SingleProcessInClassDemo()
+        case .interrupts:
+          ProcessInterruptsDemo()
+        case .interruptsInClass:
+          ProcessInterruptsInClassDemo()
+        case .simpleProcessInClass:
+          SimpleProcessInClassDemo()
+        case .failureAlertProcessInClass:
+          FailureAlertProcessInClassDemo()
         case .sharedProcessInClass:
           SharedProcessInClassDemo()
-        case .loadableInClass:
-          LoadableInClassDemo()
+        }
+      }
+      .navigationDestination(for: LoadableDemoDestination.self) { destination in
+        switch destination {
+        case .basic:
+          BasicLoadableDemo()
+        case .restartable:
+          RestartableLoadableDemo()
+        case .refreshable:
+          RefreshableLoadableDemo()
+        case .interrupts:
+          LoadableInterruptsDemo()
+        case .basicInClass:
+          BasicLoadableInClassDemo()
+        case .interruptsInClass:
+          LoadableInterruptsInClassDemo()
+        case .restartableInClass:
+          RestartableLoadableInClassDemo()
+        case .refreshableInClass:
+          RefreshableLoadableInClassDemo()
         }
       }
     }
@@ -115,13 +112,103 @@ struct Root: View {
         Text("Processed")
           .font(.system(size: 40, weight: .semibold))
           .frame(maxWidth: .infinity)
-        Text("Demo")
-          .font(.headline)
-          .frame(maxWidth: .infinity)
-          .foregroundStyle(.secondary)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical)
+    }
+  }
+  
+  @ViewBuilder @MainActor
+  private var propertyWrapperDemos: some View {
+    VStack {
+      Text("Property Wrapper")
+        .font(.headline)
+      Text("Learn how to use the `@Process` and `@Loadable` property wrappers in any SwiftUI view")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+    }
+    .multilineTextAlignment(.center)
+    .frame(maxWidth: .infinity)
+    .listRowBackground(Color.clear)
+    Section {
+      NavigationLink(value: ProcessDemoDestination.simpleProcess) {
+        Text("Simple Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.failureAlertProcess) {
+        Text("Failure Alert Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.sharedProcess) {
+        Text("Shared Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.interrupts) {
+        Text("Process Interrupts")
+      }
+    } footer: {
+      Text("See how you can use the `@Process` property wrapper directly in your views.")
+    }
+
+    Section {
+      NavigationLink(value: LoadableDemoDestination.basic) {
+        Text("Basic Loadable")
+      }
+      NavigationLink(value: LoadableDemoDestination.restartable) {
+        Text("Restartable Loadable")
+      }
+      NavigationLink(value: LoadableDemoDestination.refreshable) {
+        Text("Refreshable Loadable")
+      }
+      NavigationLink(value: LoadableDemoDestination.interrupts) {
+        Text("Loadable Interrupts")
+      }
+    } footer: {
+      Text("See how you can use the `@Loadable` property wrapper directly in your SwiftUI views.")
+    }
+  }
+  
+  @ViewBuilder @MainActor
+  private var protocolDemos: some View {
+    VStack {
+      Text("Protocols")
+        .font(.headline)
+      Text("Learn how to use the `ProcessSupport` and `LoadableSupport` protocols in an `ObservableObject` or any other class")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+    }
+    .multilineTextAlignment(.center)
+    .padding(.top)
+    .frame(maxWidth: .infinity)
+    .listRowBackground(Color.clear)
+    Section {
+      NavigationLink(value: ProcessDemoDestination.simpleProcessInClass) {
+        Text("Simple Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.failureAlertProcessInClass) {
+        Text("Failure Alert Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.sharedProcessInClass) {
+        Text("Shared Process")
+      }
+      NavigationLink(value: ProcessDemoDestination.interruptsInClass) {
+        Text("Process Interrupts")
+      }
+    } footer: {
+      Text("See how you can use `ProcessSupport` in an `ObservableObject` or any other class.")
+    }
+    Section {
+      NavigationLink(value: LoadableDemoDestination.basicInClass) {
+        Text("Basic Loadable")
+      }
+      NavigationLink(value: LoadableDemoDestination.restartableInClass) {
+        Text("Restartable Loadable")
+      }
+      NavigationLink(value: LoadableDemoDestination.refreshableInClass) {
+        Text("Refreshable Loadable")
+      }
+      NavigationLink(value: LoadableDemoDestination.interruptsInClass) {
+        Text("Loadable Interrupts")
+      }
+    } footer: {
+      Text("See how you can use `LoadableSupport` in an `ObservableObject` or any other class.")
     }
   }
 }

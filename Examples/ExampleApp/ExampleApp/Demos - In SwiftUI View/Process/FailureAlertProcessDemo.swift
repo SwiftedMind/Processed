@@ -23,97 +23,84 @@
 import SwiftUI
 import Processed
 
-struct SingleProcessInClassDemo: View {
+struct FailureAlertProcessDemo: View {
 
-  @MainActor final class ViewModel: ObservableObject, ProcessSupport {
-    @Published var process: ProcessState<SingleProcess> = .idle
-
-    func cancelProcess() {
-      cancel(\.process)
-    }
-
-    func resetProcess() {
-      reset(\.process)
-    }
-
-    func runSuccess() {
-      run(\.process) {
-        try await Task.sleep(for: .seconds(2))
-      }
-    }
-
-    func runError() {
-      run(\.process) {
-        try await Task.sleep(for: .seconds(2))
-        throw NSError(domain: "Something went wrong", code: 500)
-      }
-    }
-  }
-
-  @StateObject var viewModel = ViewModel()
+  @Process var process
+  @State private var showAlert: Bool = false
 
   var body: some View {
     List {
       buttons
       processState
     }
-    .animation(.default, value: viewModel.process)
-    .navigationTitle("Single Process Demo (VM)")
+    .animation(.default, value: process)
+    .navigationTitle("Failure Alert Process")
     .navigationBarTitleDisplayMode(.inline)
+    .alert("An error occurred", isPresented: $showAlert) {
+      Button("Try again") {
+        runSuccess()
+      }
+    } message: {
+      Text("Something went horribly, horribly wrong")
+    }
+    .onChange(of: process) {
+      showAlert = process.hasFailed
+    }
+    .onDisappear {
+      $process.cancel()
+    }
   }
 
   @ViewBuilder @MainActor
   private var buttons: some View {
     Section {
-      Button("Run process with success") {
-        viewModel.runSuccess()
+      Button("Run process") {
+        runError()
       }
-      .disabled(viewModel.process.isRunning)
-      Button("Run process with error") {
-        viewModel.runError()
-      }
-      .disabled(viewModel.process.isRunning)
-    }
-
-    Section {
-      Button("Cancel") {
-        // Cancel the current process and keep the state where it currently is
-        // so that you can start a new process without introducing data races
-        viewModel.cancelProcess()
-      }
-      Button("Reset") {
-        // Cancel the current process and reset the state to .idle
-        viewModel.resetProcess()
-      }
+      .disabled(process.isRunning)
     }
   }
 
   @ViewBuilder @MainActor
   private var processState: some View {
     Section {
-      switch viewModel.process {
+      switch process {
       case .idle:
         Text("Idle")
       case .running:
         HStack {
           Text("Running")
           Spacer()
-          ProgressView()
+          ProgressView().id(UUID())
         }
-      case .failed(_, let error):
-        Text("An error occurred: \(error.localizedDescription)")
-          .foregroundStyle(.red)
+      case .failed:
+        EmptyView()
       case .finished:
         Text("Success!")
       }
     } header: {
-      Text("Process state")
+      if !process.hasFailed {
+        Text("Process state")
+      }
+    }
+  }
+
+  @MainActor func runSuccess() {
+    $process.run {
+      try await Task.sleep(for: .seconds(2))
+    }
+  }
+
+  @MainActor func runError() {
+    $process.run {
+      try await Task.sleep(for: .seconds(2))
+      throw NSError(domain: "Something went wrong", code: 500)
     }
   }
 }
 
 #Preview {
   NavigationStack {
-    SingleProcessInClassDemo().preferredColorScheme(.dark)
+    FailureAlertProcessDemo().preferredColorScheme(.dark)
   }
 }

@@ -23,15 +23,15 @@
 @testable import Processed
 import SwiftUI
 
-@MainActor final class ProcessContainer<ProcessID>: ProcessSupport {
+@MainActor final class ProcessContainer<ProcessKind>: ProcessSupport {
   
-  private(set) var processHistory: [ProcessState<ProcessID>]
+  private(set) var processHistory: [ProcessState<ProcessKind>]
   var task: Task<Void, Never>?
-  var process: ProcessState<ProcessID> {
+  var process: ProcessState<ProcessKind> {
     didSet { processHistory.append(process) }
   }
   
-  init(initialState: ProcessState<ProcessID> = .idle) {
+  init(initialState: ProcessState<ProcessKind> = .idle) {
     self.process = initialState
     self.processHistory = [process]
   }
@@ -44,7 +44,7 @@ import SwiftUI
     }
   }
   
-  var processBinding: Binding<ProcessState<ProcessID>> {
+  var processBinding: Binding<ProcessState<ProcessKind>> {
     .init {
       self.process
     } set: { newValue in

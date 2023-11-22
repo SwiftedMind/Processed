@@ -23,24 +23,36 @@
 import SwiftUI
 import Processed
 
-struct RefreshableDemo: View {
+struct RestartableLoadableDemo: View {
+
+  // An id that can be used to restart the task that runs the continuous observation
+  @TaskIdentifier var numbersObservationId
+  @State var shouldFail: Bool = false
   @Loadable var numbers: LoadableState<[Int]>
 
   var body: some View {
     List {
+      buttons
       loadableState
     }
     .animation(.default, value: numbers)
-    .navigationTitle("Refreshable Demo")
+    .navigationTitle("Restartable Loadable")
     .navigationBarTitleDisplayMode(.inline)
-    .onAppear {
-      // On view appear, we load the numbers while showing a loading indicator
-      loadNumbers()
+    .task(id: numbersObservationId) {
+      // This task will cancel when the view disappears and restart if numbersObservationId changes
+      await stream()
     }
-    .refreshable {
-      // On a refresh, we skip the loading indicator so the current ".loaded" or ".error" state is kept until
-      // we override it with a new ".loaded" or ".error" state
-      await refreshNumbers()
+  }
+
+  @ViewBuilder @MainActor
+  private var buttons: some View {
+    Section {
+      Button("Simulate stream error", role: .cancel) {
+        shouldFail = true
+      }
+      .disabled(numbers.isError)
+    } footer: {
+      Text("Tap here to interrupt the loading stream and simulate an error case so you can test a restart")
     }
   }
 
@@ -50,45 +62,49 @@ struct RefreshableDemo: View {
     case .absent:
       EmptyView()
     case .loading:
-      ProgressView()
+      ProgressView().id(UUID())
         .frame(maxWidth: .infinity)
         .listRowBackground(Color.clear)
     case .error:
-      Text("An error occurred")
-    case .loaded(let numbers):
-      Section {
-        Text("Pull down to refresh the numbers")
+      VStack {
+        Text("An error occurred")
+        Button("Retry") {
+          // Restart the stream
+          $numbersObservationId.new()
+        }
+        .buttonStyle(.borderedProminent)
       }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical)
+    case .loaded(let numbers):
       ForEach(numbers, id: \.self) { number in
         Text(String(number))
       }
     }
   }
 
-  @MainActor func loadNumbers() {
-    $numbers.load {
-      try await fetchNumbers()
-    }
-  }
+  @MainActor func stream() async {
+    await $numbers.load { yield in
+      var numbers: [Int] = []
+      for await number in (1...100).publisher.values {
+        try await Task.sleep(for: .seconds(1))
 
-  @MainActor func refreshNumbers() async {
-    await $numbers.load(silently: true) {
-      let numbers = try await fetchNumbers()
-      return numbers.shuffled() // Shuffle them to show that they changed
-    }
-  }
+        if shouldFail {
+          shouldFail = false // Reset
+          throw NSError(domain: "", code: 42)
+        }
 
-  // Demo extraction of the loading logic. This would typically be somewhere else
-  @MainActor func fetchNumbers() async throws -> [Int] {
-      try await Task.sleep(for: .seconds(2))
-      return [1, 2, 3, 4, 5]
+        numbers.append(number)
+        yield(.loaded(numbers))
+      }
+    }
   }
 }
 
 #Preview {
   MainActor.assumeIsolated {
     NavigationStack {
-      RefreshableDemo().preferredColorScheme(.dark)
+      RestartableLoadableDemo().preferredColorScheme(.dark)
     }
   }
 }

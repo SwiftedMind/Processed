@@ -149,6 +149,11 @@ extension Loadable {
     public var projectedValue: Binding {
       self
     }
+    
+    // A binding to the underlying `LoadableState`.
+    public var binding: SwiftUI.Binding<LoadableState<Value>> {
+      $state
+    }
 
     /// An object providing an interface for automatic control over the loading process,
     /// through a set of easy to use methods.
@@ -222,22 +227,49 @@ extension Loadable {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
       let task = Task(priority: priority) {
-        do {
-          if !runSilently {
-            if case .loading = state {} else {
-              state = .loading
-            }
-          }
-          try await block { yieldedState in
-            state = yieldedState
-          }
-        } catch is CancellationError {
-          // Task was cancelled. Don't change the state anymore
-        } catch is CancelLoadable {
-          cancel()
-        } catch {
-          state = .error(error)
-        }
+        await runYieldingTaskBody(block: block)
+      }
+      self.task = task
+      return task
+    }
+    
+    /// Starts a resource loading process in a new `Task` that continuously yields results
+    /// until the `block` closure terminates or fails, while setting the ``Processed/LoadableState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Loadable/Binding/cancel()``
+    ///  or ``Processed/Loadable/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Loadable/Binding/load(silently:block:)-1qpbk`` from within a `.task` view modifier.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - priority: The priority level for the `Task` that is created and used for the loading process.
+    ///   - block: The asynchronous block to run.
+    ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    ///
+    /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor @discardableResult public func load(
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      priority: TaskPriority? = nil,
+      block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) -> Task<Void, Never> {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
+      let task = Task(priority: priority) {
+        await runYieldingTaskBody(interrupts: interrupts, block: block, onInterrupt: onInterrupt)
       }
       self.task = task
       return task
@@ -263,17 +295,39 @@ extension Loadable {
     ) async {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
-      do {
-        try await block { yieldedState in
-          state = yieldedState
-        }
-      } catch is CancellationError {
-        // Task was cancelled. Don't change the state anymore
-      } catch is CancelLoadable {
-        cancel()
-      } catch {
-        state = .error(error)
-      }
+      await runYieldingTaskBody(block: block)
+    }
+    
+    /// Starts a resource loading process in the current asynchronous context, that continuously yields results
+    /// until the `block` closure terminates or fails, while setting the ``Processed/LoadableState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - block: The asynchronous block to run.
+    ///   The block exposes a `yield` closure you can call to continuously update the resource loading state over time.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor public func load(
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) async {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
+      await runYieldingTaskBody(interrupts: interrupts, block: block, onInterrupt: onInterrupt)
     }
     
     // MARK: - Run Loadable With Result
@@ -305,16 +359,49 @@ extension Loadable {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
       let task = Task(priority: priority) {
-        do {
-          setLoadingStateIfNeeded(runSilently: runSilently)
-          state = try await .loaded(block())
-        } catch is CancellationError {
-          // Task was cancelled. Don't change the state anymore
-        } catch is CancelLoadable {
-          cancel()
-        } catch {
-          state = .error(error)
-        }
+        await runReturningTaskBody(block: block)
+      }
+      self.task = task
+      return task
+    }
+    
+    /// Starts a resource loading process in a new `Task`, waiting for a return value or thrown error from the
+    /// `block` closure, while setting the ``Processed/LoadableState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set,
+    /// while a returned value will cause a final `.loaded` state to be set.
+    ///
+    /// - Important: It is your responsibility to cancel the loading process by calling ``Processed/Loadable/Binding/cancel()``
+    ///  or ``Processed/Loadable/Binding/reset()``. If you want automated task cancellation when the SwiftUI view disappears,
+    ///  call the `async` variant of ``Processed/Loadable/Binding/load(silently:block:)-333x6`` from within a `.task` view modifier.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - priority: The priority level for the `Task` that is created and used for the loading process.
+    ///   - block: The asynchronous block to run.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    ///
+    /// - Returns: The task that runs the asynchronous loading process. You don't have to store it, but you can.
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor @discardableResult public func load(
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      priority: TaskPriority? = nil,
+      block: @MainActor @escaping () async throws -> Value,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) -> Task<Void, Never> {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
+      let task = Task(priority: priority) {
+        await runReturningTaskBody(interrupts: interrupts, block: block, onInterrupt: onInterrupt)
       }
       self.task = task
       return task
@@ -341,12 +428,167 @@ extension Loadable {
     ) async {
       cancel()
       setLoadingStateIfNeeded(runSilently: runSilently)
+      await runReturningTaskBody(block: block)
+    }
+    
+    /// Starts a resource loading process in the current asynchronous context,
+    /// waiting for a return value or thrown error from the `block` closure,
+    /// while setting the ``Processed/LoadableState`` accordingly.
+    /// This method also allows for handling interruptions at specified durations.
+    ///
+    /// This method does not create its own `Task`, so you must `await` its completion.
+    ///
+    /// At the start of this method, any previously created tasks managed by this type will be cancelled
+    /// and the loading state will be set to `.loading`, unless `runSilently` is set to true.
+    ///
+    /// Throwing an error inside the `block` closure will cause a final `.error` state to be set,
+    /// while a returned value will cause a final `.loaded` state to be set.
+    ///
+    /// - Parameters:
+    ///   - runSilently: If `true`, the state will not be set to `.loading` initially.
+    ///   - interrupts: An array of `Duration` values specifying the times at which the `onInterrupt` closure should be called.
+    ///   These values are accumulating, i.e. passing an array of `[.seconds(1), .seconds(2)]` will cause the interrupt closure
+    ///   to be called 1 second as well as 3 seconds after the process has started.
+    ///   - block: The asynchronous block to run.
+    ///   - onInterrupt: A closure that will be called after the given delays in the `interrupts` array,
+    ///   allowing you to perform actions like logging or modifying state during a long-running process, or set a timeout (by cancelling or resetting the process).
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor public func load(
+      silently runSilently: Bool = false,
+      interrupts: [Duration],
+      block: @MainActor @escaping () async throws -> Value,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) async {
+      cancel()
+      setLoadingStateIfNeeded(runSilently: runSilently)
+      await runReturningTaskBody(interrupts: interrupts, block: block, onInterrupt: onInterrupt)
+    }
+    
+    // MARK: - Internal
+    
+    @MainActor private func runYieldingTaskBody(
+      block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void
+    ) async {
+        do {
+          try await block { yieldedState in
+            state = yieldedState
+          }
+        } catch is CancellationError {
+          // Task was cancelled. Don't change the state anymore
+        } catch is CancelLoadable {
+          cancel()
+        } catch is ResetLoadable {
+          reset()
+        } catch {
+          state = .error(error)
+        }
+    }
+    
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor private func runYieldingTaskBody(
+      interrupts: [Duration],
+      block: @MainActor @escaping (_ yield: (_ state: LoadableState<Value>) -> Void) async throws -> Void,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) async {
+        do {
+          try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+              try await block { yieldedState in
+                state = yieldedState
+              }
+            }
+            
+            group.addTask {
+              var accumulatedDelay: Duration = .zero
+              for delay in interrupts {
+                try await Task.sleep(for: delay)
+                accumulatedDelay += delay
+                try await onInterrupt(accumulatedDelay)
+              }
+              
+              // When all interruptions are processed, throw a special error
+              throw InterruptionsDoneError()
+            }
+            
+            do {
+              try await group.next()
+              // Here, the block() Task has finished, so we can cancel the interruptions
+              group.cancelAll()
+            } catch is InterruptionsDoneError {
+              // In this case, the interruptions are processed and we can wair for the block() Task to finish
+              try await group.next()
+            }
+          }
+        } catch is CancellationError {
+          // Task was cancelled. Don't change the state anymore
+        } catch is CancelLoadable {
+          cancel()
+        } catch is ResetLoadable {
+          reset()
+        } catch {
+          state = .error(error)
+        }
+    }
+    
+    @MainActor private func runReturningTaskBody(
+      block: @MainActor @escaping () async throws -> Value
+    ) async {
       do {
-        state = try await .loaded(block())
+        let result = try await block()
+        try Task.checkCancellation()
+        state = .loaded(result)
       } catch is CancellationError {
         // Task was cancelled. Don't change the state anymore
       } catch is CancelLoadable {
         cancel()
+      } catch is ResetLoadable {
+        reset()
+      } catch {
+        state = .error(error)
+      }
+    }
+    
+    @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+    @MainActor private func runReturningTaskBody(
+      interrupts: [Duration],
+      block: @MainActor @escaping () async throws -> Value,
+      onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+    ) async {
+      do {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+          group.addTask {
+            let result = try await block()
+            try Task.checkCancellation()
+            state = .loaded(result)
+          }
+          
+          group.addTask {
+            var accumulatedDelay: Duration = .zero
+            for delay in interrupts {
+              try await Task.sleep(for: delay)
+              accumulatedDelay += delay
+              try await onInterrupt(accumulatedDelay)
+            }
+            
+            // When all interruptions are processed, throw a special error
+            throw InterruptionsDoneError()
+          }
+          
+          do {
+            try await group.next()
+            // Here, the block() Task has finished, so we can cancel the interruptions
+            group.cancelAll()
+          } catch is InterruptionsDoneError {
+            // In this case, the interruptions are processed and we can wair for the block() Task to finish
+            try await group.next()
+          }
+        }
+      } catch is CancellationError {
+        // Task was cancelled. Don't change the state anymore
+      } catch is CancelLoadable {
+        cancel()
+      } catch is ResetLoadable {
+        reset()
       } catch {
         state = .error(error)
       }
