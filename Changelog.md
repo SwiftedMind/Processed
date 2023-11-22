@@ -7,7 +7,7 @@
 ### New
 
 - In the closures passed to the methods of `ProcessSupport` and `LoadableSupport`, you now don't need to provide explicit `self` anymore, since those closures are simply passed into a `Task`, so reference cycles are no real concern
--  Added concept of "interrupts" for both `@Loadable` and `@Process` (as well as their protocol counterparts)
+-  Added concept of "interrupts" for both `@Loadable` and `@Process` (as well as their protocol counterparts). See the README for more information.
 - The closures passed to the `run` methods of the  `ProcessSupport` protocol are now isolated to the `MainActor`
 - Added `@TaskIdentifier` property wrapper, which is a convenience wrapper around a `UUID` SwiftUI state that helps with task restarts, e.g. `.task(id: taskIdentifier) { ... }`
 -  Reworked the demo app and fixed a few bugs and issues
