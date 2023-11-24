@@ -138,7 +138,7 @@ extension LoadableState {
   /// - Returns: A new `LoadableState` instance with the transformed value of type `T`, 
   /// or the same state if the current state is `absent`, `loading`, or `error`.
   /// - Throws: Rethrows any error that the `transform` closure might throw.
-  public func map<T>(_ transform: (Value) throws -> T) rethrows -> LoadableState<T>? {
+  public func map<T>(_ transform: (Value) throws -> T) rethrows -> LoadableState<T> {
     return switch self {
     case .absent: .absent
     case .loading: .loading
