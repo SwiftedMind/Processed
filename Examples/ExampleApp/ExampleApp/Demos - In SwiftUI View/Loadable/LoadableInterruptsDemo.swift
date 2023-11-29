@@ -25,7 +25,7 @@ import Processed
 
 struct LoadableInterruptsDemo: View {
   
-  @Loadable var numbers: LoadableState<[Int]>
+  @Loadable<[Int]> var numbers
   @State var showLoadingDelay: Bool = false
   
   var body: some View {
