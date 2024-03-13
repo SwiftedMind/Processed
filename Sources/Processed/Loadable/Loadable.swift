@@ -157,7 +157,6 @@ extension Loadable {
 
     /// An object providing an interface for automatic control over the loading process,
     /// through a set of easy to use methods.
-
     public init(
       state: SwiftUI.Binding<LoadableState<Value>>,
       task: SwiftUI.Binding<Task<Void, Never>?>
@@ -170,6 +169,10 @@ extension Loadable {
     /// through a set of easy to use methods.
     public init(_ binding: Loadable<Value>.Binding) {
       self = binding
+    }
+    
+    public static func constant(_ state: LoadableState<Value>) -> Self {
+      .init(state: .constant(state), task: .constant(nil))
     }
 
     /// Cancels the task of an ongoing resource loading process.
