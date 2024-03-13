@@ -138,7 +138,7 @@ extension LoadableState {
   /// - Returns: A new `LoadableState` instance with the transformed value of type `T`, 
   /// or the same state if the current state is `absent`, `loading`, or `error`.
   /// - Throws: Rethrows any error that the `transform` closure might throw.
-  public func map<T>(_ transform: (Value) throws -> T) rethrows -> LoadableState<T>? {
+  public func map<T>(_ transform: (Value) throws -> T) rethrows -> LoadableState<T> {
     return switch self {
     case .absent: .absent
     case .loading: .loading
@@ -146,6 +146,35 @@ extension LoadableState {
     case .loaded(let data): try .loaded(transform(data))
     }
   }
+    
+    // MARK: - compactMap
+    
+    /// Transforms the current `LoadableState` with a specified value type to a new `LoadableState`
+    /// with a different value type.
+    ///
+    /// This method applies a transformation function to the loaded value of the current state,
+    /// if available, and returns a new `LoadableState` instance with that transformed value.
+    /// If the current state is `absent`, `loading`, or `error`, it returns the same state
+    /// without applying the transformation.
+    ///
+    /// - Parameter transform: A closure that takes the current value of type `Value` and returns a
+    /// new value of type `T?`. If the result of the transform is nil `absent` will be returned as resulting state.
+    /// The closure can throw an error, in which case the method will rethrow it.
+    /// - Returns: A new `LoadableState` instance with the transformed value of type `T`,
+    /// or the same state if the current state is `absent`, `loading`, or `error`.
+    /// - Throws: Rethrows any error that the `transform` closure might throw.
+    public func compactMap<T>(_ transform: (Value) throws -> T?) rethrows -> LoadableState<T> {
+        switch self {
+        case .absent: return .absent
+        case .loading: return .loading
+        case .error(let error): return .error(error)
+        case .loaded(let value):
+            if let transformed = try transform(value) {
+                return .loaded(transformed)
+            }
+            return .absent
+        }
+    }
 }
 
 extension LoadableState: Sendable where Value: Sendable {}
