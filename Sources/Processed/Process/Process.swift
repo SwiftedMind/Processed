@@ -203,6 +203,10 @@ extension Process {
       self = binding
     }
     
+    public static func constant(_ state: ProcessState<ProcessKind>) -> Self {
+      .init(state: .constant(state), task: .constant(nil))
+    }
+    
     /// Cancels the task of an ongoing process.
     ///
     /// - Note: You are responsible for cooperating with the task cancellation within the loading closures.
