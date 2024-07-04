@@ -70,7 +70,7 @@ Add the following line to the dependencies in your `Package.swift` file:
 
 ### Xcode project
 
-Go to `File` > `Add Packages...` and enter the URL "https://github.com/SwiftedMind/Processed" into the search field at the top right. Puddles should appear in the list. Select it and click "Add Package" in the bottom right.
+Go to `File` > `Add Packages...` and enter the URL "https://github.com/SwiftedMind/Processed" into the search field at the top right. Processed should appear in the list. Select it and click "Add Package" in the bottom right.
 
 ## Documentation
 
