@@ -115,8 +115,8 @@ extension Loadable {
   /// An object providing an interface for automatic control over the loading process,
   /// through a set of easy to use methods.
   @propertyWrapper public struct Binding {
-    @SwiftUI.Binding var state: LoadableState<Value>
-    @SwiftUI.Binding var task: Task<Void, Never>?
+    @SwiftUI.Binding package var state: LoadableState<Value>
+    @SwiftUI.Binding package var task: Task<Void, Never>?
     
     /// The current state of the loadable resource.
     ///
