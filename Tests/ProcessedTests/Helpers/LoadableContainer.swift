@@ -23,7 +23,7 @@
 @testable import Processed
 import SwiftUI
 
-@MainActor final class LoadableContainer<Value>: LoadableSupport {
+@MainActor final class LoadableContainer<Value: Sendable>: LoadableSupport {
   private(set) var loadableHistory: [LoadableState<Value>]
   var task: Task<Void, Never>?
   var loadable: LoadableState<Value> {

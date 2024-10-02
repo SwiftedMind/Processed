@@ -23,7 +23,7 @@
 @testable import Processed
 import SwiftUI
 
-@MainActor final class ProcessContainer<ProcessKind>: ProcessSupport {
+@MainActor final class ProcessContainer<ProcessKind: Sendable>: ProcessSupport {
   
   private(set) var processHistory: [ProcessState<ProcessKind>]
   var task: Task<Void, Never>?

@@ -1,3 +1,4 @@
+// swiftformat:disable all
 //
 //  Copyright © 2023 Dennis Müller and all collaborators
 //
@@ -430,9 +431,11 @@ extension LoadableSupport {
     @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
   ) async {
     do {
-      try await withThrowingTaskGroup(of: Void.self) { group in
-        group.addTask {
-          self[keyPath: loadableState] = try await .loaded(block())
+      try await withThrowingTaskGroup(of: Value.self) { group in
+				group.addTask {
+					let result = try await block()
+					try Task.checkCancellation()
+					return result
         }
         
         group.addTask {
@@ -448,12 +451,16 @@ extension LoadableSupport {
         }
         
         do {
-          try await group.next()
+					if let result = try await group.next() {
+						self[keyPath: loadableState] = try await .loaded(block())
+					}
           // Here, the block() Task has finished, so we can cancel the interruptions
           group.cancelAll()
         } catch is InterruptionsDoneError {
           // In this case, the interruptions are processed and we can wair for the block() Task to finish
-          try await group.next()
+					if let result = try await group.next() {
+						self[keyPath: loadableState] = try await .loaded(block())
+					}
         }
       }
     } catch is CancellationError {

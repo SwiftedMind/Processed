@@ -1,3 +1,4 @@
+// swiftformat:disable all
 //
 //  Copyright © 2023 Dennis Müller and all collaborators
 //
