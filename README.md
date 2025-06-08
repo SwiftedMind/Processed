@@ -263,16 +263,16 @@ However, it's still really easy: You have to conform your class to the `Loadable
   @Published var numbers: LoadableState<[Int]> = .absent
 
   func loadNumbers() {
-    // Call the load method from the LoadableSupport protocol
-    load(\.numbers) {
+    // Use the new ergonomic accessor
+    loadables.numbers.load {
       try await Task.sleep(for: .seconds(2))
       return [42]
     }
   }
   
   func loadStreamedNumbers() {
-    // Call the load method that yields results from the LoadableSupport protocol
-    load(\.numbers) { yield in
+    // Call the load method that yields results using the accessor
+    loadables.numbers.load { yield in
       var numbers: [Int] = []
       for await number in [42, 73].publisher.values {
         try await Task.sleep(for: .seconds(1))
@@ -283,7 +283,7 @@ However, it's still really easy: You have to conform your class to the `Loadable
   }
 
   func cancelLoading() {
-    cancel(\.numbers)
+    loadables.numbers.cancel()
   }
 }
 ```
@@ -426,21 +426,21 @@ enum  ProcessKind {
   @Published var process: Process<ProcessKind> = .idle
 
   func save() {
-    // Call the run method from the ProcessSupport protocol
-    run(\.process, as: .save) {
+    // Use the ergonomic accessor
+    processes.process.run(as: .save) {
       try await save()
     }
   }
   
   func delete() {
-    // Call the run method from the ProcessSupport protocol
-    run(\.process, as: .delete) {
+    // Use the ergonomic accessor
+    processes.process.run(as: .delete) {
       try await delete()
     }
   }
  
   func cancelLoading() {
-    cancel(\.process)
+    processes.process.cancel()
   }
 }
 ```

@@ -548,3 +548,54 @@ extension LoadableSupport {
     }
   }
 }
+
+// MARK: - Ergonomic Accessors
+
+@dynamicMemberLookup
+public struct Loadables<Container: LoadableSupport> {
+  unowned let container: Container
+
+  public subscript<Value>(dynamicMember keyPath: ReferenceWritableKeyPath<Container, LoadableState<Value>>) -> LoadableAccessor<Container, Value> {
+    .init(container: container, keyPath: keyPath)
+  }
+}
+
+public struct LoadableAccessor<Container: LoadableSupport, Value> {
+  unowned let container: Container
+  let keyPath: ReferenceWritableKeyPath<Container, LoadableState<Value>>
+
+  @MainActor @discardableResult
+  public func load(
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value
+  ) -> Task<Void, Never> {
+    container.load(keyPath, silently: runSilently, priority: priority, block: block)
+  }
+
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult
+  public func load(
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    priority: TaskPriority? = nil,
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Value,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) -> Task<Void, Never> {
+    container.load(keyPath, silently: runSilently, interrupts: interrupts, priority: priority, block: block, onInterrupt: onInterrupt)
+  }
+
+  @MainActor
+  public func cancel() {
+    container.cancel(keyPath)
+  }
+
+  @MainActor
+  public func reset() {
+    container.reset(keyPath)
+  }
+}
+
+public extension LoadableSupport {
+  var loadables: Loadables<Self> { .init(container: self) }
+}

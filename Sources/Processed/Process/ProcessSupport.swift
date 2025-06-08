@@ -555,3 +555,77 @@ extension ProcessSupport {
     }
   }
 }
+
+// MARK: - Ergonomic Accessors
+
+@dynamicMemberLookup
+public struct Processes<Container: ProcessSupport> {
+  unowned let container: Container
+
+  public subscript<ProcessKind: Equatable>(dynamicMember keyPath: ReferenceWritableKeyPath<Container, ProcessState<ProcessKind>>) -> ProcessAccessor<Container, ProcessKind> {
+    .init(container: container, keyPath: keyPath)
+  }
+}
+
+public struct ProcessAccessor<Container: ProcessSupport, ProcessKind: Equatable> {
+  unowned let container: Container
+  let keyPath: ReferenceWritableKeyPath<Container, ProcessState<ProcessKind>>
+
+  @MainActor @discardableResult
+  public func run(
+    as process: ProcessKind,
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
+  ) -> Task<Void, Never> {
+    container.run(keyPath, as: process, silently: runSilently, priority: priority, block: block)
+  }
+
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult
+  public func run(
+    as process: ProcessKind,
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    priority: TaskPriority? = nil,
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) -> Task<Void, Never> {
+    container.run(keyPath, as: process, silently: runSilently, interrupts: interrupts, priority: priority, block: block, onInterrupt: onInterrupt)
+  }
+
+  @MainActor @discardableResult
+  public func run(
+    silently runSilently: Bool = false,
+    priority: TaskPriority? = nil,
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void
+  ) -> Task<Void, Never> where ProcessKind == SingleProcess {
+    container.run(keyPath, silently: runSilently, priority: priority, block: block)
+  }
+
+  @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
+  @MainActor @discardableResult
+  public func run(
+    silently runSilently: Bool = false,
+    interrupts: [Duration],
+    priority: TaskPriority? = nil,
+    @_implicitSelfCapture block: @MainActor @escaping () async throws -> Void,
+    @_implicitSelfCapture onInterrupt: @MainActor @escaping (_ accumulatedDelay: Duration) throws -> Void
+  ) -> Task<Void, Never> where ProcessKind == SingleProcess {
+    container.run(keyPath, silently: runSilently, interrupts: interrupts, priority: priority, block: block, onInterrupt: onInterrupt)
+  }
+
+  @MainActor
+  public func cancel() {
+    container.cancel(keyPath)
+  }
+
+  @MainActor
+  public func reset() {
+    container.reset(keyPath)
+  }
+}
+
+public extension ProcessSupport {
+  var processes: Processes<Self> { .init(container: self) }
+}
